@@ -126,7 +126,26 @@ Write-Host "  Dump file: $DumpFile"
 Write-Host "  Execute:   $Execute"
 Write-Host ""
 
-if (-not $SkipDump) {
+$useDirectCopy = $false
+if (-not $SkipDump -and -not $SkipImport) {
+    $hasMySqlDump = $null -ne (Get-Command "mysqldump" -ErrorAction SilentlyContinue)
+    $hasMySql = $null -ne (Get-Command "mysql" -ErrorAction SilentlyContinue)
+    if (-not $hasMySqlDump -or -not $hasMySql) {
+        $useDirectCopy = $true
+        Write-Host "mysqldump/mysql not found; will use php bin/leantime migration:copy-db instead."
+        Write-Host ""
+    }
+}
+
+if ($useDirectCopy) {
+    if ($Execute) {
+        Invoke-External -FilePath "php" -Arguments @("bin/leantime", "migration:copy-db")
+    } else {
+        Write-Host "Step 1+2: Direct DB copy (dry-run)"
+        Invoke-External -FilePath "php" -Arguments @("bin/leantime", "migration:copy-db", "--dry-run")
+    }
+}
+elseif (-not $SkipDump) {
     $dumpArgs = @(
         "--single-transaction",
         "--quick",
@@ -146,9 +165,7 @@ if (-not $SkipDump) {
     } else {
         Write-Host "  [dry-run] mysqldump ..."
     }
-}
-
-if (-not $SkipImport) {
+    if (-not $SkipImport) {
     $importArgs = @(
         "--host=$TargetDbHost",
         "--port=$targetDbPort",
@@ -164,6 +181,7 @@ if (-not $SkipImport) {
         Invoke-External -FilePath "mysql" -Arguments $importArgs
     } else {
         Write-Host "  [dry-run] mysql ... source $DumpFile"
+    }
     }
 }
 

@@ -118,6 +118,25 @@ echo "  Dump file: ${DUMP_FILE}"
 echo "  Execute:   ${EXECUTE}"
 echo
 
+USE_DIRECT_COPY=0
+if [[ "$SKIP_DUMP" -eq 0 && "$SKIP_IMPORT" -eq 0 ]]; then
+  if ! command -v mysqldump >/dev/null 2>&1 || ! command -v mysql >/dev/null 2>&1; then
+    USE_DIRECT_COPY=1
+    echo "mysqldump/mysql not found; will use php bin/leantime migration:copy-db instead."
+    echo
+  fi
+fi
+
+if [[ "$USE_DIRECT_COPY" -eq 1 ]]; then
+  if [[ "$EXECUTE" -eq 1 ]]; then
+    require_cmd php
+    php bin/leantime migration:copy-db
+  else
+    echo "Step 1+2: Direct DB copy (dry-run)"
+    echo "  [dry-run] php bin/leantime migration:copy-db --dry-run"
+    php bin/leantime migration:copy-db --dry-run
+  fi
+else
 if [[ "$SKIP_DUMP" -eq 0 ]]; then
   echo "Step 1: Export source DB"
   if [[ "$EXECUTE" -eq 1 ]]; then
@@ -151,6 +170,7 @@ if [[ "$SKIP_IMPORT" -eq 0 ]]; then
   else
     echo "  [dry-run] mysql ... < $DUMP_FILE"
   fi
+fi
 fi
 
 if [[ "$SKIP_MIGRATE" -eq 0 ]]; then

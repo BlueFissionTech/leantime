@@ -47,7 +47,31 @@ What this does:
 
 ## 2) Legacy Files to S3
 
-Dry run first:
+Preferred method (external runner with `lftp` + `awscli`):
+
+Dry run:
+
+```bash
+bash bin/file-cutover.sh
+```
+
+Execute:
+
+```bash
+bash bin/file-cutover.sh --execute
+```
+
+Options:
+
+- `--remote-path userfiles` FTP path on legacy server.
+- `--local-dir ./artifacts/migration/userfiles-mirror` local staging.
+- `--skip-download` re-use existing local mirror.
+- `--skip-upload` download only.
+- `--verify-only` run count checks only.
+
+Command-based method (runs in app context, requires PHP `ext-ftp`):
+
+Dry run:
 
 ```bash
 php bin/leantime migration:sync-ftp-to-s3 --dry-run --remote-path=userfiles
