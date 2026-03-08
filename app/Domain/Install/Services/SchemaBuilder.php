@@ -575,6 +575,9 @@ class SchemaBuilder
     private function createStatsTable(): void
     {
         Schema::create('zp_stats', function (Blueprint $table) {
+            // Managed MySQL providers can enforce sql_require_primary_key=ON.
+            // Keep an auto-increment PK so install does not fail in those environments.
+            $table->id();
             $table->integer('sprintId')->nullable();
             $table->integer('projectId')->nullable();
             $table->dateTime('date')->nullable();
