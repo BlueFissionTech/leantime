@@ -94,7 +94,11 @@
     "webpack": "^5.105.2",
     "webpack-cli": "^5.1.4"
   },
-  "scripts": {},
+  "scripts": {
+    "dev": "npx mix",
+    "watch": "npx mix watch",
+    "build": "npx mix --production"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Leantime/leantime"

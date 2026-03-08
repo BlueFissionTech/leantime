@@ -136,3 +136,12 @@ config/.env
 tests/Httprequests/http-client.private.env.json
 .claude/docs/personal-companion-requirements.md
 .claude/docs/git-workflow.md
+
+# Blue Fission Codex harness
+/docker/
+/scripts/
+/artifacts/
+/.codex/
+/AGENTS.md
+/AGENTS.behavior.md
+/harness.json
