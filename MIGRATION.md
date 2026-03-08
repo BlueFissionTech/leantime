@@ -1,0 +1,81 @@
+# Production Migration Guide
+
+This project includes tooling for migrating from a legacy Leantime deployment to the new target environment.
+
+## Files and Credentials
+
+- Preferred legacy source env vars: `LEAN_OLD_DB_HOST`, `LEAN_OLD_DB_USER`, `LEAN_OLD_DB_PASSWORD`, `LEAN_OLD_DB_DATABASE`, `LEAN_OLD_DB_PORT`
+- Preferred legacy FTP env vars: `FTP_OLD_HOST`, `FTP_OLD_USER`, `FTP_OLD_PASS` (`FTP_OLD_PORT` optional)
+- Target runtime env: `LEAN_DB_*`, `LEAN_USE_S3=true`, `LEAN_S3_*`
+- Optional fallback files: `artifacts/.prod.env`, `artifacts/ftp`
+
+## 1) Database Migration
+
+### Linux target server (recommended)
+
+Dry run:
+
+```bash
+bash bin/prod-cutover.sh
+```
+
+Execute:
+
+```bash
+bash bin/prod-cutover.sh --execute
+```
+
+### Windows operator machine
+
+Dry run:
+
+```powershell
+powershell -File bin/prod-cutover.ps1
+```
+
+Execute:
+
+```powershell
+powershell -File bin/prod-cutover.ps1 -Execute
+```
+
+What this does:
+
+1. Dumps source DB from `LEAN_OLD_DB_*` (or fallback `artifacts/.prod.env`).
+2. Imports into target DB from current `LEAN_DB_*`.
+3. Runs `php bin/leantime db:migrate`.
+
+## 2) Legacy Files to S3
+
+Dry run first:
+
+```bash
+php bin/leantime migration:sync-ftp-to-s3 --dry-run --remote-path=userfiles
+```
+
+Execute sync:
+
+```bash
+php bin/leantime migration:sync-ftp-to-s3 --remote-path=userfiles
+```
+
+Useful options:
+
+- `--db-only` only uploads files referenced in `zp_file`.
+- `--limit=100` canary run.
+- `--preserve-path` keep remote folder structure in S3 keys.
+- `--ftp-file=artifacts/ftp` fallback if env vars are not set.
+
+## 3) Recommended Cutover Order
+
+1. Put legacy app into a short maintenance/read-only window.
+2. Run final DB migration (`bin/prod-cutover.ps1 -Execute`).
+3. Run FTP to S3 sync command.
+4. Smoke test target app (login, projects, tickets, file download).
+5. Switch DNS for `pm.bluefission.com`.
+6. Keep rollback option by preserving old environment briefly.
+
+## 4) Rollback
+
+- Re-point DNS to old environment.
+- Keep the latest DB dump for diff/retry.
