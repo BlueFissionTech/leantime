@@ -2,8 +2,8 @@
 
 namespace Leantime\Command;
 
+use Aws\S3\S3Client;
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\FilesystemManager;
 use PDO;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -22,7 +22,7 @@ class ImportSqlCommand extends Command
 
     protected $description = 'Import SQL dump to target MySQL without mysql client binary';
 
-    public function handle(FilesystemManager $filesystems): int
+    public function handle(): int
     {
         if (! extension_loaded('pdo_mysql')) {
             $this->error('pdo_mysql extension is required.');
@@ -30,7 +30,7 @@ class ImportSqlCommand extends Command
             return Command::FAILURE;
         }
 
-        [$handle, $sourceLabel] = $this->resolveSqlStream($filesystems);
+        [$handle, $sourceLabel] = $this->resolveSqlStream();
 
         $target = $this->resolveTargetConfig();
         $dryRun = (bool) $this->option('dry-run');
@@ -189,7 +189,7 @@ class ImportSqlCommand extends Command
     /**
      * @return array{0:resource,1:string}
      */
-    private function resolveSqlStream(FilesystemManager $filesystems): array
+    private function resolveSqlStream(): array
     {
         $file = trim((string) $this->option('file'));
         $s3Key = trim((string) $this->option('s3-key'));
@@ -224,21 +224,7 @@ class ImportSqlCommand extends Command
             throw new RuntimeException('No SQL input found. Pass --file or --s3-key.');
         }
 
-        $s3Key = ltrim($s3Key, '/');
-        $disk = $filesystems->disk('s3');
-        if (! $disk->exists($s3Key)) {
-            throw new RuntimeException('S3 SQL object not found: '.$s3Key);
-        }
-
-        $handle = $disk->readStream($s3Key);
-        if (! is_resource($handle)) {
-            throw new RuntimeException('Could not open S3 SQL object stream: '.$s3Key);
-        }
-
-        $bucket = (string) (getenv('LEAN_S3_BUCKET') ?: '');
-        $label = $bucket !== '' ? "s3://{$bucket}/{$s3Key}" : "s3://{$s3Key}";
-
-        return [$handle, $label];
+        return $this->openS3SqlStream($s3Key);
     }
 
     private function guessDefaultS3Key(): string
@@ -249,6 +235,73 @@ class ImportSqlCommand extends Command
         }
 
         return '';
+    }
+
+    /**
+     * @return array{0:resource,1:string}
+     */
+    private function openS3SqlStream(string $s3Key): array
+    {
+        $bucket = trim((string) (getenv('LEAN_S3_BUCKET') ?: ''));
+        $region = trim((string) (getenv('LEAN_S3_REGION') ?: ''));
+        $endpoint = trim((string) (getenv('LEAN_S3_END_POINT') ?: ''));
+        $key = ltrim(trim($s3Key), '/');
+
+        if ($bucket === '') {
+            throw new RuntimeException('Missing LEAN_S3_BUCKET for --s3-key import.');
+        }
+        if ($region === '') {
+            throw new RuntimeException('Missing LEAN_S3_REGION for --s3-key import.');
+        }
+
+        $config = [
+            'version' => 'latest',
+            'region' => $region,
+        ];
+
+        $s3KeyId = trim((string) (getenv('LEAN_S3_KEY') ?: ''));
+        $s3Secret = trim((string) (getenv('LEAN_S3_SECRET') ?: ''));
+        if ($s3KeyId !== '' && $s3Secret !== '') {
+            $config['credentials'] = [
+                'key' => $s3KeyId,
+                'secret' => $s3Secret,
+            ];
+        }
+
+        if ($endpoint !== '' && strtolower($endpoint) !== 'null' && strtolower($endpoint) !== 'false') {
+            $config['endpoint'] = $endpoint;
+        }
+
+        $usePathStyleRaw = getenv('LEAN_S3_USE_PATH_STYLE_ENDPOINT');
+        if ($usePathStyleRaw !== false) {
+            $usePathStyle = filter_var($usePathStyleRaw, FILTER_VALIDATE_BOOLEAN);
+            $config['use_path_style_endpoint'] = $usePathStyle;
+        }
+
+        $client = new S3Client($config);
+
+        try {
+            $result = $client->getObject([
+                'Bucket' => $bucket,
+                'Key' => $key,
+            ]);
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                sprintf('S3 getObject failed for s3://%s/%s (%s)', $bucket, $key, $e->getMessage())
+            );
+        }
+
+        $body = $result['Body'] ?? null;
+        if ($body === null || ! method_exists($body, 'detach')) {
+            throw new RuntimeException('Failed to open SQL stream from S3 object.');
+        }
+
+        $handle = $body->detach();
+        if (! is_resource($handle)) {
+            throw new RuntimeException('Failed to detach SQL stream resource from S3 object.');
+        }
+
+        return [$handle, sprintf('s3://%s/%s', $bucket, $key)];
     }
 
     /**
