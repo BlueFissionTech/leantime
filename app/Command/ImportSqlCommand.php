@@ -269,7 +269,10 @@ class ImportSqlCommand extends Command
         }
 
         if ($endpoint !== '' && strtolower($endpoint) !== 'null' && strtolower($endpoint) !== 'false') {
-            $config['endpoint'] = $endpoint;
+            if (! preg_match('#^https?://#i', $endpoint)) {
+                $endpoint = 'https://'.$endpoint;
+            }
+            $config['endpoint'] = rtrim($endpoint, '/');
         }
 
         $usePathStyleRaw = getenv('LEAN_S3_USE_PATH_STYLE_ENDPOINT');
