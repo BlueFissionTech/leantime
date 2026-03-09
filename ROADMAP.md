@@ -9,6 +9,11 @@ Updated: 2026-03-09
 - Upstream-safe: keep local changes easy to rebase/merge from upstream `source`.
 - Trackable: every major item should map to a GitHub issue with acceptance criteria.
 
+## Deployment Safety Note
+
+- Production deploy trigger: any push to `master` or merged/closed PR to `master`.
+- Rule: no `master` push/merge/close actions without explicit approval in-session.
+
 ## Source of Truth and Sync
 
 - Status: done.
