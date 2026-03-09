@@ -289,8 +289,20 @@ class ImportSqlCommand extends Command
                 'Key' => $key,
             ]);
         } catch (\Throwable $e) {
+            $endpointLabel = (string) ($config['endpoint'] ?? 'aws-default');
+            $pathStyleLabel = array_key_exists('use_path_style_endpoint', $config)
+                ? (($config['use_path_style_endpoint'] ?? false) ? 'true' : 'false')
+                : 'default';
             throw new RuntimeException(
-                sprintf('S3 getObject failed for s3://%s/%s (%s)', $bucket, $key, $e->getMessage())
+                sprintf(
+                    'S3 getObject failed for s3://%s/%s [region=%s endpoint=%s path_style=%s] (%s)',
+                    $bucket,
+                    $key,
+                    $region,
+                    $endpointLabel,
+                    $pathStyleLabel,
+                    $e->getMessage()
+                )
             );
         }
 
