@@ -21,6 +21,117 @@ This spec defines module-first enhancements for the Blue Fission Leantime fork w
 - If core change is required, keep it to interface-level extension points only.
 - Avoid schema changes in core tables when module-owned tables can model the feature.
 
+## Week-1 Execution Specs
+
+### Item 1: Export/Import Integrity Hardening (#5)
+
+#### Problem
+
+Current export/import behavior is reported as unreliable with potential integrity risk.
+
+#### Goals
+
+- Make export/import deterministic and verifiable.
+- Prevent destructive or partial import outcomes.
+- Add clear preflight and post-import validation.
+
+#### Module-first Design
+
+- New module namespace: `DataIntegrityTools`.
+- Add preflight checker command:
+  - schema compatibility
+  - required tables/columns
+  - foreign key sanity checks
+- Add dry-run import validator:
+  - parse and report planned operations before execution
+- Add post-import verifier:
+  - orphan checks
+  - key relationship checks (tasks/milestones/users/projects)
+
+#### Acceptance Criteria
+
+- Import can run in dry-run mode and produce a validation report.
+- Import stops on critical validation failure.
+- Post-import verification report is generated and persisted.
+- No unexpected tenant wipe or silent orphan creation in tested datasets.
+
+### Item 2: Team CSV Export Module (#7)
+
+#### Problem
+
+Team needs a reliable whole-team export including Department, beyond current UI CSV behavior.
+
+#### Goals
+
+- Provide manager/admin export endpoint and UI action.
+- Support required columns:
+  - Task
+  - Department
+  - Assignee
+  - Due Date
+  - Product or Milestone
+  - Priority
+
+#### Module-first Design
+
+- New module namespace: `TeamCsvExport`.
+- Add module-owned export service and endpoint.
+- Integrate via tickets UI extension hook/button.
+- Use existing filter context when provided.
+
+#### Acceptance Criteria
+
+- Export works for full team scope and filtered scope.
+- Required columns are always present.
+- Missing values use explicit placeholders.
+- Output is UTF-8 BOM CSV for spreadsheet compatibility.
+
+### Item 3: Attachment Deletion Refresh Fix (#6)
+
+#### Problem
+
+Deleting attachments causes broken/incorrect post-delete UI state in task view.
+
+#### Goals
+
+- Keep task modal/view context stable after delete.
+- Refresh attachment list only, without disruptive redirect/modal mismatch.
+
+#### Module-first Design
+
+- New module namespace: `AttachmentUxFixes`.
+- Intercept delete response handling in files/task integration layer.
+- Replace full-view refresh behavior with partial attachment pane refresh.
+
+#### Acceptance Criteria
+
+- Deleting an attachment keeps user in current task context.
+- Attachment list updates immediately and correctly.
+- No broken modal/folder redirect state after deletion.
+
+### Item 4: Mobile Task Layout Fixes (#3)
+
+#### Problem
+
+Task detail layout overflows on mobile, pushing key controls/content off screen.
+
+#### Goals
+
+- Ensure task detail panes and rows fit common mobile widths.
+- Remove horizontal overflow of critical task controls.
+
+#### Module-first Design
+
+- New module namespace: `MobileTaskUx`.
+- Add scoped responsive CSS/JS overrides for ticket/task views.
+- Avoid broad global style mutations.
+
+#### Acceptance Criteria
+
+- Task detail is fully usable on common phone widths/orientations.
+- No critical controls are off-screen.
+- No regression on desktop layout.
+
 ## Feature A: RACI Notifications Module
 
 ### Problem
