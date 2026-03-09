@@ -43,6 +43,13 @@ Updated: 2026-03-09
 - Issue #9: true task dependency blocking
 - Issue #10: full API and unified query/context layer
 
+5. P2 - Task discoverability and workflow UX
+- Issue #13: people/task search + milestone visibility toggles + global search
+- Issue #14: due-date urgency colors + default due-date sort in Kanban/Table
+- Issue #15: subtask sequencing + parent progress + parent auto-complete
+- Issue #16: segmented notifications for conversation-priority
+- Issue #17: table layout fit/usability on standard monitor widths
+
 ## Backlog Candidates (Create/Refine Issues Next)
 
 1. RACI Notifications Module
@@ -56,6 +63,26 @@ Updated: 2026-03-09
 3. API Expansion Program
 - GitHub: #10
 - API coverage for goals, ideas, blueprints, tickets, milestones, and linked context search.
+
+4. Search and Visibility Improvements
+- GitHub: #13
+- People task search, per-project milestone visibility toggles, and global cross-project search.
+
+5. Due-date Prioritization UX
+- GitHub: #14
+- Overdue red, due-soon orange, and due-date-first default sorting in Kanban/Table.
+
+6. Subtask Orchestration UX
+- GitHub: #15
+- Stable due-date ordering for subtasks, parent progress counters, and parent auto-done rules.
+
+7. Notification Segmentation UX
+- GitHub: #16
+- Prioritize threads the user has commented on above general notifications.
+
+8. Table View Fit and Usability
+- GitHub: #17
+- Improve table layout behavior for common desktop monitor widths.
 
 ## Definition of Done (Roadmap Items)
 

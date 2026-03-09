@@ -13,6 +13,11 @@ This spec defines module-first enhancements for the Blue Fission Leantime fork w
 - #9 True task dependency module
 - #10 API expansion and unified context query
 - #11 Weekly roadmap execution tracker
+- #13 Search and visibility enhancements
+- #14 Due-date urgency indicators and default due-date sorting
+- #15 Subtask sequencing and parent task completion UX
+- #16 Segmented notifications by conversation priority
+- #17 Table view fit and usability improvements
 
 ## Architecture Policy
 
@@ -228,6 +233,125 @@ External automation requires complete programmatic access across all project obj
 - API returns deterministic, documented schemas suitable for automation clients.
 - Audit logging exists for automation-triggered write operations.
 - Load and permission tests pass for core automation workflows.
+
+## Feature D: Search and Visibility Enhancements
+
+### Problem
+
+Task assignment and milestone coverage are harder to audit when search is fragmented by view/scope.
+
+### Goals
+
+- Search for people and view their assigned tasks quickly.
+- Within a project, toggle milestone visibility while defaulting to all milestones/tasks shown.
+- Provide global search across projects to reduce missed tasks.
+
+### Module-first Design
+
+- New module namespace: `SearchDiscovery`.
+- Add search service adapters over tasks/milestones/projects/users.
+- Add project-level milestone visibility preference state per user/session.
+
+### Acceptance Criteria
+
+- People search returns assigned tasks with project context.
+- Milestone visibility toggles can be adjusted and reset to default all-visible.
+- Global search surfaces results across projects with clear scope labels.
+
+## Feature E: Due-date Urgency and Default Ordering
+
+### Problem
+
+Teams need a visual urgency model and chronological default ordering to prioritize work.
+
+### Goals
+
+- Mark overdue tasks in red.
+- Mark tasks due in <=3 days in orange.
+- Default Kanban and Table ordering to due date ascending (sooner first).
+
+### Module-first Design
+
+- New module namespace: `DueDatePrioritization`.
+- Add view decorators for urgency styles and default sort injection.
+- Preserve user override preferences.
+
+### Acceptance Criteria
+
+- Urgency colors render consistently in task list/board/table contexts.
+- Default sort is due-date-first across Kanban and Table views.
+- Undated tasks are grouped after dated tasks by default.
+
+## Feature F: Subtask Sequencing and Parent Progress
+
+### Problem
+
+Subtasks reorder unexpectedly on update, and parent completion progress is not explicit enough.
+
+### Goals
+
+- Keep subtasks sorted by due date after updates.
+- Display parent progress counters (for example, `3/5`).
+- Auto-mark parent done only when all subtasks are complete and verified.
+
+### Module-first Design
+
+- New module namespace: `SubtaskFlow`.
+- Add deterministic ordering service for subtasks.
+- Add parent progress aggregator and verified-completion gate.
+
+### Acceptance Criteria
+
+- Subtask order remains stable by due date after edits.
+- Parent progress counters update immediately.
+- Parent auto-completion only occurs when verification criteria are satisfied.
+
+## Feature G: Segmented Notification Streams
+
+### Problem
+
+Conversation-critical notifications are easily buried in general update volume.
+
+### Goals
+
+- Split notification center into:
+  - Priority section for threads the user has commented on.
+  - General section for all other notifications.
+
+### Module-first Design
+
+- New module namespace: `NotificationSegmentation`.
+- Add ranking/partitioning rule in notification feed assembly.
+- Keep compatibility with existing notification channels.
+
+### Acceptance Criteria
+
+- Comment-participation items appear in top-priority section.
+- Horizontal divider and section labels are clear and accessible.
+- Existing notification behavior remains backward compatible.
+
+## Feature H: Table View Fit and Usability
+
+### Problem
+
+Current table layout overflows common monitor widths even after hiding some columns.
+
+### Goals
+
+- Improve table fit and usability at common desktop resolutions.
+- Retain usable column visibility controls.
+
+### Module-first Design
+
+- New module namespace: `TableFitUx`.
+- Add responsive width strategy and controlled horizontal scroll behavior.
+- Persist column visibility preferences.
+
+### Acceptance Criteria
+
+- Table view fits standard monitor windows without critical overflow.
+- Column controls remain usable and persistent.
+- Horizontal scrolling is predictable and non-disruptive when required.
 
 ## Delivery Order
 
