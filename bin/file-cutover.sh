@@ -108,8 +108,12 @@ require_value "FTP_OLD_USER (or FTP_USER)" "$FTP_USER"
 require_value "FTP_OLD_PASS (or FTP_PASSWORD)" "$FTP_PASS"
 require_value "LEAN_S3_BUCKET" "$S3_BUCKET"
 
-require_cmd lftp
-require_cmd aws
+if [[ "$VERIFY_ONLY" -eq 0 && "$SKIP_DOWNLOAD" -eq 0 ]]; then
+  require_cmd lftp
+fi
+if [[ "$VERIFY_ONLY" -eq 1 || "$SKIP_UPLOAD" -eq 0 ]]; then
+  require_cmd aws
+fi
 
 mkdir -p "$LOCAL_DIR"
 

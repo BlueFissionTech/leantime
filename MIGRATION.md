@@ -11,6 +11,21 @@ This project includes tooling for migrating from a legacy Leantime deployment to
 
 ## 1) Database Migration
 
+### Fastest path when SQL dump file is already local
+
+Dry run:
+
+```bash
+php bin/leantime migration:import-sql --file=artifacts/u706165963_bfil_leantime.sql --dry-run
+```
+
+Execute:
+
+```bash
+php bin/leantime migration:import-sql --file=artifacts/u706165963_bfil_leantime.sql
+php bin/leantime db:migrate
+```
+
 ### Linux target server (recommended)
 
 Dry run:
@@ -46,6 +61,26 @@ What this does:
 3. Runs `php bin/leantime db:migrate`.
 
 ## 2) Legacy Files to S3
+
+### Fastest path when files are already local
+
+Dry run:
+
+```bash
+php bin/leantime migration:sync-local-to-s3 --source=artifacts/userfiles --dry-run
+```
+
+Execute:
+
+```bash
+php bin/leantime migration:sync-local-to-s3 --source=artifacts/userfiles
+```
+
+Optional safer upload:
+
+```bash
+php bin/leantime migration:sync-local-to-s3 --source=artifacts/userfiles --db-only
+```
 
 Preferred method (external runner with `lftp` + `awscli`):
 
