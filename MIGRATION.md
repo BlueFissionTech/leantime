@@ -26,6 +26,21 @@ php bin/leantime migration:import-sql --file=artifacts/u706165963_bfil_leantime.
 php bin/leantime db:migrate
 ```
 
+### SQL dump stored in S3 (no local file required)
+
+Dry run:
+
+```bash
+php bin/leantime migration:import-sql --s3-key=bkup/u706165963_bfil_leantime.sql --dry-run
+```
+
+Execute:
+
+```bash
+php bin/leantime migration:import-sql --s3-key=bkup/u706165963_bfil_leantime.sql
+php bin/leantime db:migrate
+```
+
 ### Linux target server (recommended)
 
 Dry run:

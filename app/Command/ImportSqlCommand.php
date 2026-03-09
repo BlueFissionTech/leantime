@@ -3,6 +3,7 @@
 namespace Leantime\Command;
 
 use Illuminate\Console\Command;
+use Illuminate\Filesystem\FilesystemManager;
 use PDO;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -15,12 +16,13 @@ class ImportSqlCommand extends Command
 {
     protected $signature = 'migration:import-sql
                             {--file= : Path to SQL dump file}
+                            {--s3-key= : S3 object key for SQL dump (e.g. bkup/u706165963_bfil_leantime.sql)}
                             {--dry-run : Parse statements only, do not execute}
                             {--continue-on-error : Continue processing statements after an error}';
 
     protected $description = 'Import SQL dump to target MySQL without mysql client binary';
 
-    public function handle(): int
+    public function handle(FilesystemManager $filesystems): int
     {
         if (! extension_loaded('pdo_mysql')) {
             $this->error('pdo_mysql extension is required.');
@@ -28,25 +30,13 @@ class ImportSqlCommand extends Command
             return Command::FAILURE;
         }
 
-        $file = trim((string) $this->option('file'));
-        if ($file === '') {
-            $file = $this->guessDefaultSqlFile();
-        }
-
-        if ($file === '' || ! is_file($file)) {
-            $this->error('SQL dump file not found. Pass --file=<path>.');
-
-            return Command::FAILURE;
-        }
+        [$handle, $sourceLabel] = $this->resolveSqlStream($filesystems);
 
         $target = $this->resolveTargetConfig();
         $dryRun = (bool) $this->option('dry-run');
         $continueOnError = (bool) $this->option('continue-on-error');
 
-        $this->info(sprintf(
-            'Import file: %s',
-            $file
-        ));
+        $this->info('Import source: '.$sourceLabel);
         $this->info(sprintf(
             'Target DB: %s:%s/%s',
             $target['host'],
@@ -65,11 +55,6 @@ class ImportSqlCommand extends Command
 
         try {
             $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-
-            $handle = fopen($file, 'rb');
-            if ($handle === false) {
-                throw new RuntimeException('Could not open SQL file for reading.');
-            }
 
             try {
                 foreach ($this->statementGenerator($handle) as $sql) {
@@ -196,6 +181,71 @@ class ImportSqlCommand extends Command
         $artifactSql = glob(APP_ROOT.'/artifacts/*.sql') ?: [];
         if (! empty($artifactSql)) {
             return $artifactSql[0];
+        }
+
+        return '';
+    }
+
+    /**
+     * @return array{0:resource,1:string}
+     */
+    private function resolveSqlStream(FilesystemManager $filesystems): array
+    {
+        $file = trim((string) $this->option('file'));
+        $s3Key = trim((string) $this->option('s3-key'));
+
+        if ($file !== '') {
+            if (! is_file($file)) {
+                throw new RuntimeException('SQL dump file not found: '.$file);
+            }
+            $handle = fopen($file, 'rb');
+            if ($handle === false) {
+                throw new RuntimeException('Could not open SQL file for reading: '.$file);
+            }
+
+            return [$handle, $file];
+        }
+
+        if ($s3Key === '') {
+            $guessedFile = $this->guessDefaultSqlFile();
+            if ($guessedFile !== '' && is_file($guessedFile)) {
+                $handle = fopen($guessedFile, 'rb');
+                if ($handle === false) {
+                    throw new RuntimeException('Could not open SQL file for reading: '.$guessedFile);
+                }
+
+                return [$handle, $guessedFile];
+            }
+
+            $s3Key = $this->guessDefaultS3Key();
+        }
+
+        if ($s3Key === '') {
+            throw new RuntimeException('No SQL input found. Pass --file or --s3-key.');
+        }
+
+        $s3Key = ltrim($s3Key, '/');
+        $disk = $filesystems->disk('s3');
+        if (! $disk->exists($s3Key)) {
+            throw new RuntimeException('S3 SQL object not found: '.$s3Key);
+        }
+
+        $handle = $disk->readStream($s3Key);
+        if (! is_resource($handle)) {
+            throw new RuntimeException('Could not open S3 SQL object stream: '.$s3Key);
+        }
+
+        $bucket = (string) (getenv('LEAN_S3_BUCKET') ?: '');
+        $label = $bucket !== '' ? "s3://{$bucket}/{$s3Key}" : "s3://{$s3Key}";
+
+        return [$handle, $label];
+    }
+
+    private function guessDefaultS3Key(): string
+    {
+        $oldDb = trim((string) (getenv('LEAN_OLD_DB_DATABASE') ?: ''));
+        if ($oldDb !== '') {
+            return 'bkup/'.$oldDb.'.sql';
         }
 
         return '';
