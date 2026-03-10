@@ -1,6 +1,6 @@
 # Local Fork Feature Specification
 
-Updated: 2026-03-09
+Updated: 2026-03-10
 
 ## Scope
 
@@ -18,6 +18,29 @@ This spec defines module-first enhancements for the Blue Fission Leantime fork w
 - #15 Subtask sequencing and parent task completion UX
 - #16 Segmented notifications by conversation priority
 - #17 Table view fit and usability improvements
+- #18 Comment formatting retention (line/paragraph spacing)
+
+## Sprint Sequencing (2026-03-10 to 2026-03-17)
+
+1. Stabilization first
+- #5, #6, #3
+- Deliver data-safety and UX regressions before new feature surface expansion.
+
+2. Reporting and discoverability second
+- #7, #13
+- Deliver manager-visible operational value with minimal core-risk modules.
+
+3. Workflow clarity third
+- #14, #15, #16, #17
+- Prioritize due-date visibility, ordering stability, and notification signal quality.
+
+4. Platform runway fourth
+- #8, #9, #10 (with #1 alignment)
+- Keep these behind explicit module boundaries and feature flags.
+
+5. Comment rendering fidelity
+- #18
+- Preserve comment editor intent (newlines/paragraph spacing) while keeping sanitization controls.
 
 ## Architecture Policy
 
@@ -352,6 +375,31 @@ Current table layout overflows common monitor widths even after hiding some colu
 - Table view fits standard monitor windows without critical overflow.
 - Column controls remain usable and persistent.
 - Horizontal scrolling is predictable and non-disruptive when required.
+
+## Feature I: Comment Formatting Retention
+
+### Problem
+
+Comment rendering collapses user-entered spacing, making multi-line notes harder to read.
+
+### Goals
+
+- Preserve line breaks entered in the comment editor.
+- Preserve paragraph spacing within sane limits.
+- Maintain current sanitization/XSS protections.
+
+### Module-first Design
+
+- New module namespace: `CommentFormatting`.
+- Hook comment render pipeline to normalize line endings and map safe newlines to `<br>`/paragraph blocks.
+- Keep sanitizer as source of truth before render formatting is applied.
+
+### Acceptance Criteria
+
+- Newlines entered in editor render as visible line breaks.
+- Multiple blank lines are preserved up to configured limit.
+- Existing comments render consistently after deployment.
+- Security regression tests for comment sanitization remain green.
 
 ## Delivery Order
 

@@ -1,6 +1,6 @@
 # Leantime Local Fork Roadmap
 
-Updated: 2026-03-09
+Updated: 2026-03-10
 
 ## Operating Principles
 
@@ -24,31 +24,38 @@ Updated: 2026-03-09
   - Review upstream changes impacting local modules
   - Rebase/merge strategy documented per release cycle
 
-## Week Plan (2026-03-09 to 2026-03-13)
+## Week Plan (2026-03-10 to 2026-03-17)
 
-1. P1 - Data reliability and migration hardening
-- Issue #5: export/import integrity risks
-- Outcome: reliable backup/restore and import validation checklist
+1. P0 - Stabilization and release safety
+- Issue #5: export/import integrity hardening (complete preflight + validation report path)
+- Issue #6: attachment deletion refresh bug
+- Issue #3: mobile task layout overflow
+- Gate: no production-facing rollout until #5 preflight checks and regression tests are green
 
-2. P1 - Module-based team CSV export
-- Issue #7: module-based team task CSV export
-- Outcome: CSV export with Task, Department, Assignee, Due Date, Product/Milestone, Priority
+2. P1 - Reporting and search/discovery
+- Issue #7: module-based team CSV export (Task, Department, Assignee, Due Date, Product/Milestone, Priority)
+- Issue #13: people/task search + project milestone visibility toggles + global search
+- Gate: include role-safe access checks and filter-aware results
 
-3. P2 - UX bug cleanup
-- Issue #6: attachment deletion refresh behavior
-- Issue #3: mobile view layout issues
+3. P1 - Workflow urgency and execution clarity
+- Issue #14: due-date urgency colors + default due-date sort in Kanban/Table
+- Issue #15: subtask due-date ordering + parent progress counters + parent auto-complete rules
+- Issue #16: segmented notifications (commented-thread priority section)
+- Issue #17: table layout fit/usability at standard monitor widths
+- Issue #18: preserve comment line spacing/paragraph formatting in rendered comments
 
-4. P2 - Next module specs (design complete, implementation queued)
+4. P2 - Next module implementation runway
 - Issue #8: RACI-based notifications
 - Issue #9: true task dependency blocking
 - Issue #10: full API and unified query/context layer
+- Issue #1: owner/evaluator/signoff role modeling (align with RACI module decisions)
 
-5. P2 - Task discoverability and workflow UX
-- Issue #13: people/task search + milestone visibility toggles + global search
-- Issue #14: due-date urgency colors + default due-date sort in Kanban/Table
-- Issue #15: subtask sequencing + parent progress + parent auto-complete
-- Issue #16: segmented notifications for conversation-priority
-- Issue #17: table layout fit/usability on standard monitor widths
+## Validation Snapshot (2026-03-10)
+
+- Containerized Unit suite passed:
+  - `Codeception Unit`
+  - `122 tests, 319 assertions`
+- Branch CI via Keryx for `initial-ramp-up`: no recent workflow run returned.
 
 ## Backlog Candidates (Create/Refine Issues Next)
 
@@ -83,6 +90,10 @@ Updated: 2026-03-09
 8. Table View Fit and Usability
 - GitHub: #17
 - Improve table layout behavior for common desktop monitor widths.
+
+9. Comment Formatting Retention
+- GitHub: #18
+- Preserve user-entered newlines and paragraph spacing in comment display without weakening sanitization.
 
 ## Definition of Done (Roadmap Items)
 

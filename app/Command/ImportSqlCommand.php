@@ -254,15 +254,14 @@ class ImportSqlCommand extends Command
             throw new RuntimeException('Missing LEAN_S3_REGION for --s3-key import.');
         }
 
-        $config = [
+        $baseConfig = [
             'version' => 'latest',
-            'region' => $region,
         ];
 
         $s3KeyId = trim((string) (getenv('LEAN_S3_KEY') ?: ''));
         $s3Secret = trim((string) (getenv('LEAN_S3_SECRET') ?: ''));
         if ($s3KeyId !== '' && $s3Secret !== '') {
-            $config['credentials'] = [
+            $baseConfig['credentials'] = [
                 'key' => $s3KeyId,
                 'secret' => $s3Secret,
             ];
@@ -272,36 +271,59 @@ class ImportSqlCommand extends Command
             if (! preg_match('#^https?://#i', $endpoint)) {
                 $endpoint = 'https://'.$endpoint;
             }
-            $config['endpoint'] = rtrim($endpoint, '/');
+            $baseConfig['endpoint'] = rtrim($endpoint, '/');
         }
 
         $usePathStyleRaw = getenv('LEAN_S3_USE_PATH_STYLE_ENDPOINT');
         if ($usePathStyleRaw !== false) {
             $usePathStyle = filter_var($usePathStyleRaw, FILTER_VALIDATE_BOOLEAN);
-            $config['use_path_style_endpoint'] = $usePathStyle;
+            $baseConfig['use_path_style_endpoint'] = $usePathStyle;
         }
 
-        $client = new S3Client($config);
+        $regionsToTry = [$region];
+        if (
+            isset($baseConfig['endpoint'])
+            && str_contains(strtolower((string) $baseConfig['endpoint']), 'digitaloceanspaces.com')
+            && strtolower($region) !== 'us-east-1'
+        ) {
+            $regionsToTry[] = 'us-east-1';
+        }
 
-        try {
-            $result = $client->getObject([
-                'Bucket' => $bucket,
-                'Key' => $key,
-            ]);
-        } catch (\Throwable $e) {
-            $endpointLabel = (string) ($config['endpoint'] ?? 'aws-default');
-            $pathStyleLabel = array_key_exists('use_path_style_endpoint', $config)
-                ? (($config['use_path_style_endpoint'] ?? false) ? 'true' : 'false')
+        $result = null;
+        $lastError = null;
+        $activeRegion = $region;
+        foreach ($regionsToTry as $regionToTry) {
+            $config = $baseConfig;
+            $config['region'] = $regionToTry;
+            $client = new S3Client($config);
+
+            try {
+                $result = $client->getObject([
+                    'Bucket' => $bucket,
+                    'Key' => $key,
+                ]);
+                $activeRegion = $regionToTry;
+                $lastError = null;
+                break;
+            } catch (\Throwable $e) {
+                $lastError = $e;
+            }
+        }
+
+        if ($result === null || $lastError !== null) {
+            $endpointLabel = (string) ($baseConfig['endpoint'] ?? 'aws-default');
+            $pathStyleLabel = array_key_exists('use_path_style_endpoint', $baseConfig)
+                ? (($baseConfig['use_path_style_endpoint'] ?? false) ? 'true' : 'false')
                 : 'default';
             throw new RuntimeException(
                 sprintf(
-                    'S3 getObject failed for s3://%s/%s [region=%s endpoint=%s path_style=%s] (%s)',
+                    'S3 getObject failed for s3://%s/%s [regions_tried=%s endpoint=%s path_style=%s] (%s)',
                     $bucket,
                     $key,
-                    $region,
+                    implode(',', $regionsToTry),
                     $endpointLabel,
                     $pathStyleLabel,
-                    $e->getMessage()
+                    $lastError ? $lastError->getMessage() : 'Unknown error'
                 )
             );
         }
@@ -316,7 +338,7 @@ class ImportSqlCommand extends Command
             throw new RuntimeException('Failed to detach SQL stream resource from S3 object.');
         }
 
-        return [$handle, sprintf('s3://%s/%s', $bucket, $key)];
+        return [$handle, sprintf('s3://%s/%s (region=%s)', $bucket, $key, $activeRegion)];
     }
 
     /**
