@@ -82,7 +82,10 @@ class ShowTicket extends Controller
             if ($result = $this->fileService->deleteFile($params['delFile'])) {
                 $this->tpl->setNotification($this->language->__('notifications.file_deleted'), 'success');
 
-                return Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.'#files');
+                $response = Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.'#files');
+                $response->headers->set('HX-Trigger', 'ticketUpdate');
+
+                return $response;
             }
 
             $this->tpl->setNotification($result['msg'], 'error');

@@ -49,6 +49,16 @@ This spec defines module-first enhancements for the Blue Fission Leantime fork w
 - If core change is required, keep it to interface-level extension points only.
 - Avoid schema changes in core tables when module-owned tables can model the feature.
 
+## Stabilization Exceptions
+
+- Issues #3 and #6 are treated as core-minimal stabilization exceptions.
+- Reason:
+  - Both are defects in the existing ticket modal/task flow.
+  - A module wrapper would increase maintenance and upstream merge risk for behavior already rendered by core templates/controllers.
+- Requirement:
+  - Fix them with the narrowest possible core edits.
+  - Avoid introducing new persistence, extension scaffolding, or broad UI rewrites for these items.
+
 ## Week-1 Execution Specs
 
 ### Item 1: Export/Import Integrity Hardening (#5)
@@ -125,11 +135,13 @@ Deleting attachments causes broken/incorrect post-delete UI state in task view.
 - Keep task modal/view context stable after delete.
 - Refresh attachment list only, without disruptive redirect/modal mismatch.
 
-#### Module-first Design
+#### Core-minimal Design Exception
 
-- New module namespace: `AttachmentUxFixes`.
-- Intercept delete response handling in files/task integration layer.
-- Replace full-view refresh behavior with partial attachment pane refresh.
+- Use the existing ticket/files flow and align it with the working modal refresh path already used by comment deletion.
+- Limit changes to:
+  - delete response headers/redirect behavior
+  - attachment delete link modal classes
+- Do not introduce a parallel module for this fix.
 
 #### Acceptance Criteria
 
@@ -148,11 +160,11 @@ Task detail layout overflows on mobile, pushing key controls/content off screen.
 - Ensure task detail panes and rows fit common mobile widths.
 - Remove horizontal overflow of critical task controls.
 
-#### Module-first Design
+#### Core-minimal Design Exception
 
-- New module namespace: `MobileTaskUx`.
-- Add scoped responsive CSS/JS overrides for ticket/task views.
-- Avoid broad global style mutations.
+- Keep the fix scoped to the current ticket modal/task templates and mobile CSS.
+- Remove or override fixed-width constraints that break narrow viewports.
+- Avoid broad global style mutations or a separate module for this defect.
 
 #### Acceptance Criteria
 

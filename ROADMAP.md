@@ -8,6 +8,19 @@ Updated: 2026-03-10
 - Core-minimal: only add small extension points to core when a module cannot hook in cleanly.
 - Upstream-safe: keep local changes easy to rebase/merge from upstream `source`.
 - Trackable: every major item should map to a GitHub issue with acceptance criteria.
+- Branch discipline: after the current stabilization batch, each unstarted issue moves on its own `feature/...` or `issue/...` branch and ships through its own PR.
+
+## Stabilization Exception Policy
+
+- For existing regressions inside core ticket/task flows, prefer the smallest possible core patch over a new module.
+- Current exceptions:
+  - Issue #3: mobile task layout overflow
+  - Issue #6: attachment deletion refresh bug
+- Rationale:
+  - These fixes correct defects in existing templates/controllers already owned by core.
+  - A module layer here would add more merge surface and UI indirection than a narrowly scoped patch.
+- Constraint:
+  - Keep these fixes limited to targeted template/controller/CSS changes with no structural rewrite.
 
 ## Deployment Safety Note
 
@@ -28,8 +41,8 @@ Updated: 2026-03-10
 
 1. P0 - Stabilization and release safety
 - Issue #5: export/import integrity hardening (complete preflight + validation report path)
-- Issue #6: attachment deletion refresh bug
-- Issue #3: mobile task layout overflow
+- Issue #6: attachment deletion refresh bug (`core-minimal stabilization exception`)
+- Issue #3: mobile task layout overflow (`core-minimal stabilization exception`)
 - Gate: no production-facing rollout until #5 preflight checks and regression tests are green
 
 2. P1 - Reporting and search/discovery

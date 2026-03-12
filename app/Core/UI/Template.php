@@ -750,6 +750,36 @@ class Template
     }
 
     /**
+     * escapeComment - escapes comment content while preserving plain-text line breaks.
+     */
+    public function escapeComment(?string $content): string
+    {
+        if ($content === null) {
+            return '';
+        }
+
+        $sanitized = $this->escapeMinimal($content);
+
+        if ($sanitized === '') {
+            return '';
+        }
+
+        // Rich-text comments already carry their own paragraph or line-break markup.
+        if (preg_match('/<\s*(p|div|br|ul|ol|li|blockquote|pre|table|h[1-6])\b/i', $sanitized)) {
+            return $sanitized;
+        }
+
+        // Keep allowed inline markup untouched rather than trying to rewrite mixed HTML/text.
+        if (preg_match('/<[^>]+>/', $sanitized)) {
+            return $sanitized;
+        }
+
+        $normalized = preg_replace("/(\r\n|\r|\n){4,}/", "\n\n\n", $sanitized) ?? $sanitized;
+
+        return nl2br($normalized, false);
+    }
+
+    /**
      * truncate - truncate text
      *
      * @see https://stackoverflow.com/questions/1193500/truncate-text-containing-html-ignoring-tags
