@@ -394,7 +394,7 @@
                                                     </div>
                                                 @endif
 
-                                            <div class="text" id="commentText-{{ $row['id'] }}">{!! $tpl->escapeMinimal($row['text']) !!}</div>
+                                            <div class="text tiptap-content" id="commentText-{{ $row['id'] }}">{!! $tpl->escapeComment($row['text']) !!}</div>
                                         </div>
 
                                         <div class="commentLinks">

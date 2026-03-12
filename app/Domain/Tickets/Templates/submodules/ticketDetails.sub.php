@@ -10,7 +10,7 @@ $ticketTypes = $tpl->get('ticketTypes');
 ?>
 <input type="hidden" value="<?php $tpl->e($ticket->id); ?>" name="id" autocomplete="off" readonly/>
 
-<div class="row">
+<div class="row ticket-details-layout">
     <div class="col-md-9">
         <div class="row marginBottom">
             <div class="col-md-12">
@@ -19,7 +19,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                     <input type="text" value="<?php $tpl->e($ticket->headline); ?>" name="headline" class="main-title-input" autocomplete="off" style="width:99%; margin-bottom:10px;" placeholder="<?= $tpl->__('input.placeholders.enter_title_of_todo')?>"/>
                 </div>
                 <!-- Status -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.todo_status'); ?></label>
                     <div class="">
                         <select
@@ -40,7 +40,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                 </div>
 
                 <!-- Priority -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.priority'); ?></label>
                     <div class="">
                         <select id='priority' name='priority' class="">
@@ -57,7 +57,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                 </div>
 
                 <!-- Effort -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.effort'); ?></label>
                     <div class="">
                         <select id='storypoints' name='storypoints' class="">
@@ -74,7 +74,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                 </div>
 
                 <!-- Editor -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.editor'); ?></label>
                     <div class="">
 
@@ -101,7 +101,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                 </div>
 
                 <!-- Collaborators -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.collaborators'); ?></label>
                     <div class="">
                         <select data-placeholder="<?php echo $tpl->__('label.filter_by_user'); ?>" 
@@ -124,7 +124,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                 </div>
 
                 <!-- Due Date -->
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.due_date'); ?></label>
                     <div class="">
                         <input type="text" class="dates" style="width:110px;" id="deadline" autocomplete="off"
@@ -141,7 +141,7 @@ $ticketTypes = $tpl->get('ticketTypes');
                     </div>
                 </div>
 
-                <div class="form-group tw-flex tw-w-3/5">
+                <div class="form-group ticket-meta-row tw-flex tw-w-3/5">
                     <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $tpl->__('label.tags'); ?></label>
                     <div class="">
                         <input type="text" value="<?php $tpl->e($ticket->tags); ?>" name="tags" id="tags" />

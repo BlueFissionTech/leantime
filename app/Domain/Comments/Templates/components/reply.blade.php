@@ -17,8 +17,8 @@
                 $tpl->escape($comment['lastname'])
             ) !!}</span>
 
-            <div class="text">
-                {!! $tpl->escapeMinimal($comment['text']) !!}
+            <div class="text tiptap-content">
+                {!! $tpl->escapeComment($comment['text']) !!}
             </div>
 
         </div>

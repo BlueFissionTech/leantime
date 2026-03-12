@@ -2171,6 +2171,31 @@ body .widgettitle .editHeadline:hover {
     margin: 0;
 }
 
+.commentContent .tiptap-content,
+.commentContent .tiptap-content p,
+.commentContent .tiptap-content ul,
+.commentContent .tiptap-content ol,
+.commentContent .tiptap-content blockquote,
+.commentContent .tiptap-content pre,
+#comments .tiptap-content,
+#comments .tiptap-content p,
+#comments .tiptap-content ul,
+#comments .tiptap-content ol,
+#comments .tiptap-content blockquote,
+#comments .tiptap-content pre {
+    margin: 0 0 0.75rem;
+}
+
+.commentContent .tiptap-content,
+#comments .tiptap-content {
+    line-height: 1.5;
+}
+
+.commentContent .tiptap-content > :last-child,
+#comments .tiptap-content > :last-child {
+    margin-bottom: 0;
+}
+
 #mainToggler {
     margin-bottom:15px;
     display:block;

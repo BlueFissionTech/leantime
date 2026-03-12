@@ -48,7 +48,7 @@ $ticket = $tpl->get('ticket');
 
                     <?php
                     if ($login::userIsAtLeast($roles::$editor)) { ?>
-                        <li><a href="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>?delFile=<?php echo $file['id'] ?>" class="delete"><i class="fa fa-trash"></i> <?php echo $tpl->__('links.delete'); ?></a></li>
+                        <li><a href="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>?delFile=<?php echo $file['id'] ?>" class="delete formModal deleteFile"><i class="fa fa-trash"></i> <?php echo $tpl->__('links.delete'); ?></a></li>
                     <?php } ?>
 
                 </ul>

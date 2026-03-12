@@ -51,7 +51,7 @@ if (str_contains($formUrl, '?delComment=')) {
                     <strong>
                     <?php printf($tpl->__('text.full_name'), $tpl->escape($row['firstname']), $tpl->escape($row['lastname'])); ?>
                     </strong><br/>
-                    <div style="margin-left:60px;"><?php echo $row['text']; ?></div>
+                    <div style="margin-left:60px;" class="tiptap-content"><?php echo $tpl->escapeComment($row['text']); ?></div>
                     <div class="clear"></div>
                     <div style="padding-left:60px" class="commentLinks">
                         <a href="javascript:void(0);" class="replyButton"
@@ -97,7 +97,7 @@ if (str_contains($formUrl, '?delComment=')) {
                                 <strong>
                                 <?php printf($tpl->__('text.full_name'), $tpl->escape($comment['firstname']), $tpl->escape($comment['lastname'])); ?>
                                 </strong><br/>
-                                <p style="margin-left:60px;"><?php echo nl2br($comment['text']); ?></p>
+                                <div style="margin-left:60px;" class="tiptap-content"><?php echo $tpl->escapeComment($comment['text']); ?></div>
                                 <div class="clear"></div>
 
                                 <div style="padding-left:60px" class="commentLinks">
