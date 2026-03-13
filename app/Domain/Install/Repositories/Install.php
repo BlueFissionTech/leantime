@@ -2158,7 +2158,11 @@ class Install
             }
             // Case A: Only plural exists - rename to singular
             elseif ($pluralExists && ! $singularExists) {
-                $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    $this->connection->statement("ALTER TABLE `{$pluralTable}` RENAME TO `{$singularTable}`");
+                } else {
+                    $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                }
             }
             // Case E: Neither exists - create singular with correct schema
             elseif (! $pluralExists && ! $singularExists) {
@@ -2187,11 +2191,18 @@ class Install
      */
     private function tableExistsForMigration(string $tableName): bool
     {
-        $result = $this->connection->select(
-            'SELECT COUNT(*) as cnt FROM information_schema.tables
-             WHERE table_schema = DATABASE() AND table_name = ?',
-            [$tableName]
-        );
+        if ($this->connection->getDriverName() === 'sqlite') {
+            $result = $this->connection->select(
+                "SELECT COUNT(*) as cnt FROM sqlite_master WHERE type = 'table' AND name = ?",
+                [$tableName]
+            );
+        } else {
+            $result = $this->connection->select(
+                'SELECT COUNT(*) as cnt FROM information_schema.tables
+                 WHERE table_schema = DATABASE() AND table_name = ?',
+                [$tableName]
+            );
+        }
 
         return $result[0]->cnt > 0;
     }
@@ -2201,6 +2212,18 @@ class Install
      */
     private function columnExistsForMigration(string $tableName, string $columnName): bool
     {
+        if ($this->connection->getDriverName() === 'sqlite') {
+            $result = $this->connection->select("PRAGMA table_info(`{$tableName}`)");
+
+            foreach ($result as $column) {
+                if (($column->name ?? null) === $columnName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         $result = $this->connection->select(
             'SELECT COUNT(*) as cnt FROM information_schema.columns
              WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?',
@@ -2215,6 +2238,18 @@ class Install
      */
     private function indexExistsForMigration(string $tableName, string $indexName): bool
     {
+        if ($this->connection->getDriverName() === 'sqlite') {
+            $result = $this->connection->select("PRAGMA index_list(`{$tableName}`)");
+
+            foreach ($result as $index) {
+                if (($index->name ?? null) === $indexName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         $result = $this->connection->select(
             'SELECT COUNT(*) as cnt FROM information_schema.statistics
              WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
@@ -2238,9 +2273,10 @@ class Install
             $targetHasTypo = $this->columnExistsForMigration($targetTable, 'enitityA');
             $targetEntityAColumn = $targetHasTypo ? 'enitityA' : 'entityA';
 
-            // Insert data from source into target, ignoring duplicates
+            // Insert data from source into target, ignoring duplicates.
+            $insertKeyword = $this->connection->getDriverName() === 'sqlite' ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
             $this->connection->statement("
-                INSERT IGNORE INTO `{$targetTable}` (
+                {$insertKeyword} INTO `{$targetTable}` (
                     `{$targetEntityAColumn}`, `entityAType`, `entityB`, `entityBType`,
                     `relationship`, `createdOn`, `createdBy`, `meta`
                 )
@@ -2263,22 +2299,40 @@ class Install
      */
     private function createEntityRelationshipTable(): void
     {
-        $this->connection->statement('
-            CREATE TABLE `zp_entity_relationship` (
-                `id` INT NOT NULL AUTO_INCREMENT,
-                `entityA` INT NULL,
-                `entityAType` VARCHAR(45) NULL,
-                `entityB` INT NULL,
-                `entityBType` VARCHAR(45) NULL,
-                `relationship` VARCHAR(45) NULL,
-                `createdOn` DATETIME NULL,
-                `createdBy` INT NULL,
-                `meta` TEXT NULL,
-                PRIMARY KEY (`id`),
-                INDEX `entityA` (`entityA` ASC, `entityAType` ASC, `relationship` ASC),
-                INDEX `entityB` (`entityB` ASC, `entityBType` ASC, `relationship` ASC)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ');
+        if ($this->connection->getDriverName() === 'sqlite') {
+            $this->connection->statement('
+                CREATE TABLE `zp_entity_relationship` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                    `entityA` INT NULL,
+                    `entityAType` VARCHAR(45) NULL,
+                    `entityB` INT NULL,
+                    `entityBType` VARCHAR(45) NULL,
+                    `relationship` VARCHAR(45) NULL,
+                    `createdOn` DATETIME NULL,
+                    `createdBy` INT NULL,
+                    `meta` TEXT NULL
+                )
+            ');
+            $this->connection->statement('CREATE INDEX IF NOT EXISTS `entityA` ON `zp_entity_relationship` (`entityA`, `entityAType`, `relationship`)');
+            $this->connection->statement('CREATE INDEX IF NOT EXISTS `entityB` ON `zp_entity_relationship` (`entityB`, `entityBType`, `relationship`)');
+        } else {
+            $this->connection->statement('
+                CREATE TABLE `zp_entity_relationship` (
+                    `id` INT NOT NULL AUTO_INCREMENT,
+                    `entityA` INT NULL,
+                    `entityAType` VARCHAR(45) NULL,
+                    `entityB` INT NULL,
+                    `entityBType` VARCHAR(45) NULL,
+                    `relationship` VARCHAR(45) NULL,
+                    `createdOn` DATETIME NULL,
+                    `createdBy` INT NULL,
+                    `meta` TEXT NULL,
+                    PRIMARY KEY (`id`),
+                    INDEX `entityA` (`entityA` ASC, `entityAType` ASC, `relationship` ASC),
+                    INDEX `entityB` (`entityB` ASC, `entityBType` ASC, `relationship` ASC)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ');
+        }
     }
 
     /**
@@ -2288,9 +2342,16 @@ class Install
     {
         try {
             if ($this->columnExistsForMigration($tableName, 'enitityA')) {
-                $this->connection->statement(
-                    "ALTER TABLE `{$tableName}` CHANGE COLUMN `enitityA` `entityA` INT NULL"
-                );
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    if (! $this->columnExistsForMigration($tableName, 'entityA')) {
+                        $this->connection->statement("ALTER TABLE `{$tableName}` ADD COLUMN `entityA` INT NULL");
+                    }
+                    $this->connection->statement("UPDATE `{$tableName}` SET `entityA` = `enitityA` WHERE `entityA` IS NULL");
+                } else {
+                    $this->connection->statement(
+                        "ALTER TABLE `{$tableName}` CHANGE COLUMN `enitityA` `entityA` INT NULL"
+                    );
+                }
             }
         } catch (\Exception $e) {
             Log::error("Migration 30410: Failed to fix column typo in {$tableName}: ".$e->getMessage());
@@ -2305,13 +2366,23 @@ class Install
         try {
             // Drop the old index if it exists (it may reference the wrong column)
             if ($this->indexExistsForMigration($tableName, 'entityA')) {
-                $this->connection->statement("ALTER TABLE `{$tableName}` DROP INDEX `entityA`");
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    $this->connection->statement("DROP INDEX IF EXISTS `entityA`");
+                } else {
+                    $this->connection->statement("ALTER TABLE `{$tableName}` DROP INDEX `entityA`");
+                }
             }
 
             // Create the index with correct columns
-            $this->connection->statement(
-                "ALTER TABLE `{$tableName}` ADD INDEX `entityA` (`entityA` ASC, `entityAType` ASC, `relationship` ASC)"
-            );
+            if ($this->connection->getDriverName() === 'sqlite') {
+                $this->connection->statement(
+                    "CREATE INDEX IF NOT EXISTS `entityA` ON `{$tableName}` (`entityA`, `entityAType`, `relationship`)"
+                );
+            } else {
+                $this->connection->statement(
+                    "ALTER TABLE `{$tableName}` ADD INDEX `entityA` (`entityA` ASC, `entityAType` ASC, `relationship` ASC)"
+                );
+            }
         } catch (\Exception $e) {
             Log::error("Migration 30410: Failed to ensure entityA index on {$tableName}: ".$e->getMessage());
         }
@@ -2323,7 +2394,9 @@ class Install
 
         $sql = [
             // Add color column to zp_canvas for notebook color support
-            'ALTER TABLE `zp_canvas` ADD COLUMN `color` VARCHAR(50) DEFAULT \'ocean\' AFTER `description`;',
+            $this->connection->getDriverName() === 'sqlite'
+                ? 'ALTER TABLE `zp_canvas` ADD COLUMN `color` VARCHAR(50) DEFAULT \'ocean\';'
+                : 'ALTER TABLE `zp_canvas` ADD COLUMN `color` VARCHAR(50) DEFAULT \'ocean\' AFTER `description`;',
         ];
 
         foreach ($sql as $statement) {
@@ -2367,7 +2440,11 @@ class Install
             if ($pluralExists && $singularExists) {
                 $this->mergeEntityRelationshipTables($pluralTable, $singularTable);
             } elseif ($pluralExists && ! $singularExists) {
-                $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    $this->connection->statement("ALTER TABLE `{$pluralTable}` RENAME TO `{$singularTable}`");
+                } else {
+                    $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                }
             } elseif (! $pluralExists && ! $singularExists) {
                 $this->createEntityRelationshipTable();
 
@@ -2411,7 +2488,11 @@ class Install
             if ($pluralExists && $singularExists) {
                 $this->mergeEntityRelationshipTables($pluralTable, $singularTable);
             } elseif ($pluralExists && ! $singularExists) {
-                $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    $this->connection->statement("ALTER TABLE `{$pluralTable}` RENAME TO `{$singularTable}`");
+                } else {
+                    $this->connection->statement("RENAME TABLE `{$pluralTable}` TO `{$singularTable}`");
+                }
             } elseif (! $pluralExists && ! $singularExists) {
                 $this->createEntityRelationshipTable();
 
@@ -2455,9 +2536,15 @@ class Install
                 }
 
                 // Check if index already exists before adding
-                $existingIndexes = collect(
-                    $this->connection->select("SHOW INDEX FROM `{$index['table']}`")
-                )->pluck('Key_name')->unique()->toArray();
+                if ($this->connection->getDriverName() === 'sqlite') {
+                    $existingIndexes = collect(
+                        $this->connection->select("PRAGMA index_list(`{$index['table']}`)")
+                    )->pluck('name')->unique()->toArray();
+                } else {
+                    $existingIndexes = collect(
+                        $this->connection->select("SHOW INDEX FROM `{$index['table']}`")
+                    )->pluck('Key_name')->unique()->toArray();
+                }
 
                 if (! in_array($index['name'], $existingIndexes)) {
                     Schema::table($index['table'], function (Blueprint $table) use ($index) {
