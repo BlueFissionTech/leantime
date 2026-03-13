@@ -1,0 +1,50 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${BF_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./:/app
+      - ./docker/nginx/laravel.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks: [bf]
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command:
+      - /bin/sh
+      - /app/docker/php/init-storage.sh
+    volumes:
+      - ./:/app
+      - app-storage:/app/storage
+      - ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/99-xdebug.ini:ro
+    environment:
+      APP_ENV: local
+      PHP_IDE_CONFIG: "serverName=bf-local"
+      DB_CONNECTION: ${BF_DB_CONNECTION:-sqlite}
+      LEAN_DB_DEFAULT_CONNECTION: ${BF_DB_CONNECTION:-sqlite}
+      DB_HOST: ${BF_DB_HOST:-mysql}
+      DB_PORT: ${BF_DB_PORT:-3306}
+      DB_DATABASE: ${BF_DB_DATABASE:-app}
+      DB_USERNAME: ${BF_DB_USERNAME:-root}
+      DB_PASSWORD: ${BF_DB_PASSWORD:-root}
+      LEAN_DB_HOST: ${BF_DB_HOST:-mysql}
+      LEAN_DB_PORT: ${BF_DB_PORT:-3306}
+      LEAN_DB_DATABASE: ${BF_DB_DATABASE:-app}
+      LEAN_DB_USER: ${BF_DB_USERNAME:-root}
+      LEAN_DB_PASSWORD: ${BF_DB_PASSWORD:-root}
+      LEAN_USE_REDIS: ${BF_USE_REDIS:-false}
+      LEAN_REDIS_HOST: ${BF_REDIS_HOST:-redis}
+      LEAN_REDIS_PORT: ${BF_REDIS_PORT:-6379}
+      LEAN_DEBUG: ${BF_LEAN_DEBUG:-1}
+      LEAN_LOG_CHANNELS: ${BF_LEAN_LOG_CHANNELS:-stderr}
+      CACHE_DRIVER: ${BF_CACHE_DRIVER:-array}
+      SESSION_DRIVER: ${BF_SESSION_DRIVER:-array}
+      QUEUE_CONNECTION: ${BF_QUEUE_CONNECTION:-sync}
+    networks: [bf]
+
+volumes:
+  app-storage:
