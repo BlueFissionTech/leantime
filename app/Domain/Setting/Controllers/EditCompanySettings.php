@@ -136,8 +136,11 @@ class EditCompanySettings extends Controller
     {
         // Look & feel updates
         if (isset($params['primarycolor']) && $params['primarycolor'] != '') {
-            $this->settingsRepo->saveSetting('companysettings.primarycolor', htmlentities(addslashes($params['primarycolor'])));
-            $this->settingsRepo->saveSetting('companysettings.secondarycolor', htmlentities(addslashes($params['secondarycolor'])));
+            $primaryColor = $this->sanitizeHexColor($params['primarycolor']);
+            $secondaryColor = $this->sanitizeHexColor($params['secondarycolor'] ?? $params['primarycolor']);
+
+            $this->settingsRepo->saveSetting('companysettings.primarycolor', $primaryColor);
+            $this->settingsRepo->saveSetting('companysettings.secondarycolor', $secondaryColor);
 
             // Check if main color is still in the system
             // if so remove. This call should be removed in a few versions.
@@ -146,8 +149,8 @@ class EditCompanySettings extends Controller
                 $this->settingsRepo->deleteSetting('companysettings.mainColor');
             }
 
-            session(['companysettings.primarycolor' => htmlentities(addslashes($params['primarycolor']))]);
-            session(['companysettings.secondarycolor' => htmlentities(addslashes($params['secondarycolor']))]);
+            session(['companysettings.primarycolor' => $primaryColor]);
+            session(['companysettings.secondarycolor' => $secondaryColor]);
 
             $this->tpl->setNotification($this->language->__('notifications.company_settings_edited_successfully'), 'success');
         }
@@ -205,4 +208,15 @@ class EditCompanySettings extends Controller
      * delete - handle delete requests
      */
     public function delete($params) {}
+
+    private function sanitizeHexColor(string $color): string
+    {
+        $color = trim($color);
+
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1) {
+            return $color;
+        }
+
+        return '#006c9e';
+    }
 }
