@@ -1,5 +1,12 @@
 
 <ul class="sortableTicketList" style="margin-bottom:120px;">
+    @if (($subtaskSummary['total'] ?? 0) > 0)
+        <li class="subtaskProgressSummary">
+            <span class="fa fa-diagram-successor"></span>
+            {{ $subtaskSummary['completed'] }}/{{ $subtaskSummary['total'] }}
+        </li>
+    @endif
+
     <li class="">
         <a href="javascript:void(0);" class="quickAddLink" id="subticket_new_link" onclick="jQuery('#subticket_new').toggle('fast', function() {jQuery(this).find('input[name=headline]').focus();}); jQuery(this).toggle('fast');"><i class="fas fa-plus-circle"></i> {{ __("links.add_task") }}</a>
         <div class="ticketBox hideOnLoad" id="subticket_new" >
