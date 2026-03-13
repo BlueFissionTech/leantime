@@ -338,7 +338,14 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                             }
                         ?>
                             <td data-order="<?= $row['dateToFinish'] ?>" >
-                                <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo $date ?>" class="quickDueDates secretInput" data-id="<?php echo $row['id']; ?>" name="date" />
+                                <input
+                                    type="text"
+                                    title="<?php echo $tpl->__('label.due'); ?>"
+                                    value="<?php echo $date ?>"
+                                    class="quickDueDates secretInput due-date-input<?= ! empty($row['timeAlert']) ? ' is-'.$row['timeAlert'] : '' ?>"
+                                    data-id="<?php echo $row['id']; ?>"
+                                    name="date"
+                                />
                             </td>
                             <td data-order="<?= $tpl->e($row['planHours']); ?>">
                                 <input type="text" value="<?= $tpl->e($row['planHours']); ?>" name="planHours" class="small-input secretInput" onchange="leantime.ticketsController.updatePlannedHours(this, '<?= $row['id']?>'); jQuery(this).parent().attr('data-order',jQuery(this).val());" />
