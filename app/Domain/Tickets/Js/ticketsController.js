@@ -1598,7 +1598,7 @@ leantime.ticketsController = (function () {
             var columnIndex = false;
 
 
-            var defaultOrder = [];
+            var defaultOrder = [[9, 'asc']];
 
             var allTickets = jQuery(".ticketTable").DataTable({
                 "language": {
