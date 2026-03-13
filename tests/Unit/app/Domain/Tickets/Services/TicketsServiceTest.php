@@ -170,4 +170,15 @@ class TicketsServiceTest extends TestCase
         $this->assertArrayNotHasKey('timeFrom', $result);
         $this->assertArrayNotHasKey('timeTo', $result);
     }
+
+    public function test_prepare_ticket_search_array_maps_all_projects_scope(): void
+    {
+        $criteria = $this->ticketsService->prepareTicketSearchArray([
+            'projectId' => 'all',
+            'term' => 'alex',
+        ]);
+
+        $this->assertSame('', $criteria['currentProject']);
+        $this->assertSame('alex', $criteria['term']);
+    }
 }
