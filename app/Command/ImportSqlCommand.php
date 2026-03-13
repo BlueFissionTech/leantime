@@ -4,6 +4,7 @@ namespace Leantime\Command;
 
 use Aws\S3\S3Client;
 use Illuminate\Console\Command;
+use Leantime\Domain\DataIntegrityTools\Services\ImportExportSafetyService;
 use PDO;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -18,6 +19,8 @@ class ImportSqlCommand extends Command
                             {--file= : Path to SQL dump file}
                             {--s3-key= : S3 object key for SQL dump (e.g. bkup/u706165963_bfil_leantime.sql)}
                             {--dry-run : Parse statements only, do not execute}
+                            {--allow-destructive : Allow DROP/TRUNCATE statements to execute}
+                            {--report-file= : Write a JSON pre/post verification report to this path}
                             {--continue-on-error : Continue processing statements after an error}';
 
     protected $description = 'Import SQL dump to target MySQL without mysql client binary';
@@ -31,10 +34,15 @@ class ImportSqlCommand extends Command
         }
 
         [$handle, $sourceLabel] = $this->resolveSqlStream();
+        $sqlFile = $this->cacheStreamToTempFile($handle);
+        fclose($handle);
 
         $target = $this->resolveTargetConfig();
         $dryRun = (bool) $this->option('dry-run');
+        $allowDestructive = (bool) $this->option('allow-destructive');
         $continueOnError = (bool) $this->option('continue-on-error');
+        $reportFile = $this->resolveReportFile();
+        $safetyService = app()->make(ImportExportSafetyService::class);
 
         $this->info('Import source: '.$sourceLabel);
         $this->info(sprintf(
@@ -47,7 +55,34 @@ class ImportSqlCommand extends Command
             $this->warn('Running in dry-run mode.');
         }
 
+        $analysisHandle = fopen($sqlFile, 'rb');
+        if ($analysisHandle === false) {
+            throw new RuntimeException('Could not reopen cached SQL file for analysis.');
+        }
+        try {
+            $analysis = $safetyService->analyzeStatements($this->statementGenerator($analysisHandle));
+        } finally {
+            fclose($analysisHandle);
+        }
+        if ($analysis['destructiveCount'] > 0 && ! $allowDestructive) {
+            $this->error('Import aborted: destructive SQL detected. Re-run with --allow-destructive to override.');
+            foreach ($analysis['destructiveStatements'] as $statement) {
+                $this->line(' - '.$statement);
+            }
+            $this->writeReport($reportFile, [
+                'source' => $sourceLabel,
+                'dryRun' => $dryRun,
+                'analysis' => $analysis,
+                'aborted' => 'destructive_sql_detected',
+            ]);
+
+            @unlink($sqlFile);
+
+            return Command::FAILURE;
+        }
+
         $pdo = $this->connect($target);
+        $preflight = $safetyService->verifyDatabase($pdo);
 
         $statementCount = 0;
         $successCount = 0;
@@ -57,7 +92,12 @@ class ImportSqlCommand extends Command
             $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
 
             try {
-                foreach ($this->statementGenerator($handle) as $sql) {
+                $executionHandle = fopen($sqlFile, 'rb');
+                if ($executionHandle === false) {
+                    throw new RuntimeException('Could not reopen cached SQL file for execution.');
+                }
+
+                foreach ($this->statementGenerator($executionHandle) as $sql) {
                     $statementCount++;
 
                     if ($dryRun) {
@@ -88,10 +128,25 @@ class ImportSqlCommand extends Command
                     }
                 }
             } finally {
-                fclose($handle);
+                if (isset($executionHandle) && is_resource($executionHandle)) {
+                    fclose($executionHandle);
+                }
             }
         } catch (\Throwable $e) {
             $this->error('Import aborted: '.$e->getMessage());
+            $this->writeReport($reportFile, [
+                'source' => $sourceLabel,
+                'dryRun' => $dryRun,
+                'analysis' => $analysis,
+                'preflight' => $preflight,
+                'summary' => [
+                    'statementsParsed' => $statementCount,
+                    'statementsExecuted' => $successCount,
+                    'statementErrors' => $errorCount,
+                ],
+                'error' => $e->getMessage(),
+            ]);
+            @unlink($sqlFile);
 
             return Command::FAILURE;
         } finally {
@@ -102,6 +157,21 @@ class ImportSqlCommand extends Command
             }
         }
 
+        $postflight = $safetyService->verifyDatabase($pdo);
+        $this->writeReport($reportFile, [
+            'source' => $sourceLabel,
+            'dryRun' => $dryRun,
+            'analysis' => $analysis,
+            'preflight' => $preflight,
+            'postflight' => $postflight,
+            'summary' => [
+                'statementsParsed' => $statementCount,
+                'statementsExecuted' => $successCount,
+                'statementErrors' => $errorCount,
+            ],
+        ]);
+        @unlink($sqlFile);
+
         $this->newLine();
         $this->info('SQL import summary');
         $this->line('Statements parsed: '.$statementCount);
@@ -109,6 +179,7 @@ class ImportSqlCommand extends Command
             $this->line('Statements executed: '.$successCount);
             $this->line('Statement errors: '.$errorCount);
         }
+        $this->line('Report file: '.$reportFile);
 
         return $errorCount > 0 ? Command::FAILURE : Command::SUCCESS;
     }
@@ -395,6 +466,50 @@ class ImportSqlCommand extends Command
         }
 
         return str_ends_with($trimmed, $delimiter);
+    }
+
+    private function resolveReportFile(): string
+    {
+        $explicit = trim((string) $this->option('report-file'));
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        return APP_ROOT.'/artifacts/logs/import-report-'.date('Ymd-His').'.json';
+    }
+
+    /**
+     * @param  resource  $handle
+     */
+    private function cacheStreamToTempFile($handle): string
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'leantime-import-');
+        if ($tempFile === false) {
+            throw new RuntimeException('Could not allocate temporary SQL cache file.');
+        }
+
+        $target = fopen($tempFile, 'wb');
+        if ($target === false) {
+            throw new RuntimeException('Could not open temporary SQL cache file for writing.');
+        }
+
+        try {
+            stream_copy_to_stream($handle, $target);
+        } finally {
+            fclose($target);
+        }
+
+        return $tempFile;
+    }
+
+    private function writeReport(string $path, array $report): void
+    {
+        $directory = dirname($path);
+        if (! is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        file_put_contents($path, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 }
 
