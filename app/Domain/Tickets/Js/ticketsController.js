@@ -1634,6 +1634,9 @@ leantime.ticketsController = (function () {
                 "searching": false,
                 "stateSave": true,
                 "displayLength":100,
+                "scrollX": true,
+                "scrollCollapse": true,
+                "autoWidth": false,
                 "order": defaultOrder,
                 "columnDefs": [
                         { "visible": false, "targets": 10 },
@@ -1876,10 +1879,16 @@ leantime.ticketsController = (function () {
                 "searching": false,
                 "stateSave": true,
                 "displayLength":100,
+                "scrollX": true,
+                "scrollCollapse": true,
+                "autoWidth": false,
                 "order": defaultOrder,
                 "columnDefs": [
                     { "visible": false, "targets": 7 },
                     { "visible": false, "targets": 8 },
+                    { "visible": false, "targets": 10 },
+                    { "visible": false, "targets": 11 },
+                    { "visible": false, "targets": 12 },
                     { "target": "no-sort", "orderable": false},
                 ]
 
