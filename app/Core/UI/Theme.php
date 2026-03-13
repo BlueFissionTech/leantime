@@ -479,7 +479,14 @@ class Theme
             return $_COOKIE['colorScheme'];
         }
 
-        if (! empty($this->config->primarycolor) && ! empty($this->config->secondarycolor)) {
+        $companyPrimaryColor = $this->settingsRepo->getSetting('companysettings.primarycolor');
+        $companySecondaryColor = $this->settingsRepo->getSetting('companysettings.secondarycolor');
+
+        if (
+            (! empty($this->config->primarycolor) && ! empty($this->config->secondarycolor))
+            || $companyPrimaryColor !== false
+            || $companySecondaryColor !== false
+        ) {
             // Return default
             $this->setColorScheme('companyColors');
 
@@ -985,7 +992,7 @@ class Theme
                 session(['usersettings.colors.secondaryColor' => $this->config->secondaryColor]);
             }
 
-            $secondaryColor = $this->settingsRepo->getSetting('companysettings.secondaryColor');
+            $secondaryColor = $this->settingsRepo->getSetting('companysettings.secondarycolor');
             if ($secondaryColor !== false) {
                 session(['usersettings.colors.secondaryColor' => $secondaryColor]);
             }

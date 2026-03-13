@@ -72,6 +72,28 @@ $companySettings = $tpl->get('companySettings');
                                     </div>
                                     <br />
                                     <h4 class="widgettitle title-light"><span
+                                            class="fa fa-palette"></span><?php echo $tpl->__('tabs.theme'); ?>
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-2">
+                                            <label for="primarycolor"><?= $tpl->__('label.theme_color')?></label>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+                                                <label style="display:flex; flex-direction:column; gap:6px;">
+                                                    <span><?= $tpl->__('label.primary_color')?></span>
+                                                    <input type="color" name="primarycolor" id="primarycolor" value="<?= $companySettings['primarycolor'] ?: '#006c9e' ?>" style="width:70px; height:42px; padding:2px;" />
+                                                </label>
+                                                <label style="display:flex; flex-direction:column; gap:6px;">
+                                                    <span><?= $tpl->__('label.secondary_color')?></span>
+                                                    <input type="color" name="secondarycolor" id="secondarycolor" value="<?= $companySettings['secondarycolor'] ?: '#19b394' ?>" style="width:70px; height:42px; padding:2px;" />
+                                                </label>
+                                            </div>
+                                            <small><?= $tpl->__('text.update_theme')?></small>
+                                        </div>
+                                    </div>
+                                    <br />
+                                    <h4 class="widgettitle title-light"><span
                                             class="fa fa-cog"></span><?php echo $tpl->__('subtitles.defaults'); ?>
                                     </h4>
                                     <div class="row">
