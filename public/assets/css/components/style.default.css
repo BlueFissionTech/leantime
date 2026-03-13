@@ -2169,6 +2169,19 @@ body .widgettitle .editHeadline:hover {
 .commentContent .text {
     text-align:left;
     margin: 0;
+    white-space: pre-wrap;
+}
+
+.commentContent .text p {
+    margin: 0 0 0.85em;
+}
+
+.commentContent .text p:last-child {
+    margin-bottom: 0;
+}
+
+.commentContent .text p:empty::before {
+    content: "\00a0";
 }
 
 #mainToggler {
