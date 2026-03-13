@@ -28,8 +28,11 @@
 
             <div class="col-md-4" style="padding:0 15px;">
                 @if($cardType == "full")
-                    <i class="fa-solid fa-business-time infoIcon" data-tippy-content=" {{ __("label.due") }}"></i>
-                    <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
+                    <div class="kanban-due-date{{ !empty($row['timeAlert']) ? ' is-'.$row['timeAlert'] : '' }}">
+                        <x-global::kanban.time-indicator :type="$row['timeAlert'] ?? null" class="tw-mr-xs" />
+                        <i class="fa-solid fa-business-time infoIcon" data-tippy-content=" {{ __("label.due") }}"></i>
+                        <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput due-date-input{{ !empty($row['timeAlert']) ? ' is-'.$row['timeAlert'] : '' }}" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
+                    </div>
                 @endif
             </div>
 

@@ -235,9 +235,23 @@ $allTickets = $group['items'];
                                                     </div>
                                                     <div class="tw-flex">
                                                     <?php if ($row['dateToFinish'] != '0000-00-00 00:00:00' && $row['dateToFinish'] != '1969-12-31 00:00:00') { ?>
-                                                        <div>
+                                                        <div class="kanban-due-date<?= ! empty($row['timeAlert']) ? ' is-'.$row['timeAlert'] : '' ?>">
+                                                            <?php
+                                                            echo app('blade.compiler')::render(
+                                                                '<x-global::kanban.time-indicator :type="$type" class="tw-mr-xs" />',
+                                                                ['type' => $row['timeAlert'] ?? null]
+                                                            );
+                                                            ?>
                                                             <?php echo $tpl->__('label.due_icon'); ?>
-                                                            <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo format($row['dateToFinish'])->date() ?>" class="duedates secretInput" style="margin-left:0px;" data-id="<?php echo $row['id']; ?>" name="date" />
+                                                            <input
+                                                                type="text"
+                                                                title="<?php echo $tpl->__('label.due'); ?>"
+                                                                value="<?php echo format($row['dateToFinish'])->date() ?>"
+                                                                class="duedates secretInput due-date-input<?= ! empty($row['timeAlert']) ? ' is-'.$row['timeAlert'] : '' ?>"
+                                                                style="margin-left:0px;"
+                                                                data-id="<?php echo $row['id']; ?>"
+                                                                name="date"
+                                                            />
                                                         </div>
                                                         <div>
                                                             <?php $tpl->dispatchTplEvent('afterDates', ['ticket' => $row]); ?>

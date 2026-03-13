@@ -561,6 +561,18 @@ table td{
     font-weight:bold;
 }
 
+.ticketTable .due-date-input.is-overdue,
+.ticketTable .due-date-input.is-overdue:focus {
+    color: #b42318;
+    font-weight: 700;
+}
+
+.ticketTable .due-date-input.is-dueSoon,
+.ticketTable .due-date-input.is-dueSoon:focus {
+    color: #b54708;
+    font-weight: 700;
+}
+
 .dt-button-down-arrow {
     font-size:0px;
 }
