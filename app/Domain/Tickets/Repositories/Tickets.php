@@ -908,18 +908,11 @@ class Tickets
 
     public function getAllSubtasks($id): false|array
     {
-        $dateFormatSql = match ($this->dbHelper->getDriverName()) {
-            'mysql' => "DATE_FORMAT(zp_tickets.date, '%Y,%m,%e')",
-            'pgsql' => "TO_CHAR(zp_tickets.date, 'YYYY,MM,DD')",
-            default => "DATE_FORMAT(zp_tickets.date, '%Y,%m,%e')",
-        };
-
-        $wrappedDateToFinish = $this->dbHelper->wrapColumn('zp_tickets.dateToFinish');
-        $dateToFinishFormatSql = match ($this->dbHelper->getDriverName()) {
-            'mysql' => "DATE_FORMAT({$wrappedDateToFinish}, '%Y,%m,%e')",
-            'pgsql' => "TO_CHAR({$wrappedDateToFinish}, 'YYYY,MM,DD')",
-            default => "DATE_FORMAT({$wrappedDateToFinish}, '%Y,%m,%e')",
-        };
+        $dateFormatSql = $this->dbHelper->formatDate('zp_tickets.date', '%Y,%m,%e');
+        $dateToFinishFormatSql = $this->dbHelper->formatDate(
+            $this->dbHelper->wrapColumn('zp_tickets.dateToFinish'),
+            '%Y,%m,%e'
+        );
 
         $results = $this->connection->table('zp_tickets')
             ->select([
