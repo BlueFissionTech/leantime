@@ -213,7 +213,7 @@ class Install
 
     /**
      * Select/switch to a specific database
-     * Handles database-specific syntax for MySQL vs PostgreSQL
+     * Handles database-specific syntax for MySQL, PostgreSQL, and SQLite.
      */
     private function selectDatabase(string $database): void
     {
@@ -224,6 +224,9 @@ class Install
             // Since we can't "USE" a database in PostgreSQL like MySQL,
             // the database is specified at connection time
             $this->connection->getPdo()->exec('SET search_path TO public');
+        } elseif ($driver === 'sqlite') {
+            // SQLite uses a single file-backed database selected at connection time.
+            return;
         } else {
             // MySQL: USE statement
             $this->connection->statement('USE `'.$database.'`');
