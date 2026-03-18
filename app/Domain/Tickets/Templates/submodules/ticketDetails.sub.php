@@ -6,6 +6,8 @@ $ticket = $tpl->get('ticket');
 $remainingHours = $tpl->get('remainingHours');
 $statusLabels = $tpl->get('statusLabels');
 $ticketTypes = $tpl->get('ticketTypes');
+$dependencyTicketIds = $tpl->get('dependencyTicketIds') ?? [];
+$dependencyTickets = $tpl->get('dependencyTickets') ?? [];
 
 ?>
 <input type="hidden" value="<?php $tpl->e($ticket->id); ?>" name="id" autocomplete="off" readonly/>
@@ -320,6 +322,39 @@ $ticketTypes = $tpl->get('ticketTypes');
                                     }?>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">Blocked by</label>
+                        <div class="">
+                            <div class="form-group">
+                                <select name="dependencyTicketIds[]" class="span11" multiple="multiple" data-placeholder="Select prerequisite tasks">
+                                    <?php
+                                    if (is_array($tpl->get('ticketParents'))) {
+                                        foreach ($tpl->get('ticketParents') as $ticketRow) {
+                                            echo "<option value='".$ticketRow->id."'";
+
+                                            if (in_array((int) $ticketRow->id, array_map('intval', $dependencyTicketIds), true)) {
+                                                echo " selected='selected' ";
+                                            }
+
+                                            echo '>'.$tpl->escape($ticketRow->headline).'</option>';
+                                        }
+                                    }?>
+                                </select>
+                            </div>
+                            <?php if (! empty($dependencyTickets)) { ?>
+                                <div class="small" style="margin-top:6px;">
+                                    <?php foreach ($dependencyTickets as $dependencyTicket) { ?>
+                                        <div>
+                                            <a href="#/tickets/showTicket/<?php echo (int) $dependencyTicket['id']; ?>">
+                                                #<?php echo (int) $dependencyTicket['id']; ?> <?php echo $tpl->escape($dependencyTicket['headline']); ?>
+                                            </a>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            <?php } ?>
                         </div>
                     </div>
 

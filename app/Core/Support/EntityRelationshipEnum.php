@@ -15,6 +15,12 @@ enum EntityRelationshipEnum: string
     case Collaborator = 'collaborator';
 
     /**
+     * Represents a directed dependency between two tickets.
+     * entityA depends on entityB.
+     */
+    case Dependency = 'dependency';
+
+    /**
      * Add other relationship types as needed.
      */
 }

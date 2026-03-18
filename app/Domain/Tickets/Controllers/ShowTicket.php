@@ -11,6 +11,7 @@ use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
+use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 use Leantime\Domain\Users\Services\Users as UserService;
@@ -32,6 +33,8 @@ class ShowTicket extends Controller
 
     private UserService $userService;
 
+    private TicketdependencyService $ticketdependencyService;
+
     public function init(
         ProjectService $projectService,
         TicketService $ticketService,
@@ -39,7 +42,8 @@ class ShowTicket extends Controller
         FileService $fileService,
         CommentService $commentService,
         TimesheetService $timesheetService,
-        UserService $userService
+        UserService $userService,
+        TicketdependencyService $ticketdependencyService
     ): void {
         $this->projectService = $projectService;
         $this->ticketService = $ticketService;
@@ -48,6 +52,7 @@ class ShowTicket extends Controller
         $this->commentService = $commentService;
         $this->timesheetService = $timesheetService;
         $this->userService = $userService;
+        $this->ticketdependencyService = $ticketdependencyService;
 
         if (session()->exists('lastPage') === false) {
             session(['lastPage' => BASE_URL.'/tickets/showKanban']);
@@ -109,7 +114,11 @@ class ShowTicket extends Controller
 
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('ticketParents', $this->ticketService->getAllPossibleParents($ticket));
-        $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels());
+        $statusLabels = $this->ticketService->getStatusLabels();
+        $this->tpl->assign('statusLabels', $statusLabels);
+        $this->tpl->assign('dependencyTicketIds', $this->ticketdependencyService->getDependencyTicketIds($ticket->id));
+        $this->tpl->assign('dependencyTickets', $this->ticketdependencyService->getDependencies($ticket->id));
+        $this->tpl->assign('isBlocked', $this->ticketdependencyService->isTicketBlocked($ticket->id, $statusLabels));
         $this->tpl->assign('ticketTypes', $this->ticketService->getTicketTypes());
         $this->tpl->assign('ticketTypeIcons', $this->ticketService->getTypeIcons());
         $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
