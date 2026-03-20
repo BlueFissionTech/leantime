@@ -74,7 +74,7 @@ class PortalResolver
             return false;
         }
 
-        $client = $this->findClientByNeedle($baseHost !== '' ? $baseHost : 'support');
+        $client = $this->findClientByNeedles($this->buildHostNeedles($baseHost !== '' ? $baseHost : 'support'));
         if ($client === false) {
             $client = $isLocalHost ? $this->findFirstClientWithSupportProject() : false;
         }
@@ -147,7 +147,19 @@ class PortalResolver
             return false;
         }
 
-        $decoded = json_decode($value, true);
+        $decoded = json_decode(trim($value), true);
+
+        if (! is_array($decoded)) {
+            $trimmed = trim($value);
+
+            if (
+                strlen($trimmed) >= 2
+                && (($trimmed[0] === '"' && $trimmed[strlen($trimmed) - 1] === '"')
+                || ($trimmed[0] === "'" && $trimmed[strlen($trimmed) - 1] === "'"))
+            ) {
+                $decoded = json_decode(stripslashes(substr($trimmed, 1, -1)), true);
+            }
+        }
 
         return is_array($decoded) ? $decoded : false;
     }
@@ -168,23 +180,75 @@ class PortalResolver
             return $_SERVER[$key];
         }
 
+        $configValue = $this->config->get($key);
+        if ($configValue !== null && $configValue !== '') {
+            return $configValue;
+        }
+
         return false;
     }
 
     private function findClientByNeedle(string $needle): array|false
     {
-        $needle = strtolower($needle);
+        return $this->findClientByNeedles([$needle]);
+    }
+
+    private function findClientByNeedles(array $needles): array|false
+    {
+        $needles = array_values(array_unique(array_filter(array_map(function ($needle) {
+            return $this->normalizeNeedle((string) $needle);
+        }, $needles))));
+
+        if (count($needles) === 0) {
+            return false;
+        }
 
         foreach ($this->clientRepository->getAll() as $client) {
-            $internet = strtolower((string) ($client['internet'] ?? ''));
-            $name = strtolower((string) ($client['name'] ?? ''));
+            $internet = $this->normalizeNeedle((string) ($client['internet'] ?? ''));
+            $name = $this->normalizeNeedle((string) ($client['name'] ?? ''));
 
-            if (($internet !== '' && str_contains($internet, $needle)) || ($name !== '' && str_contains($name, $needle))) {
-                return $client;
+            foreach ($needles as $needle) {
+                if (
+                    ($internet !== '' && (str_contains($internet, $needle) || str_contains($needle, $internet)))
+                    || ($name !== '' && (str_contains($name, $needle) || str_contains($needle, $name)))
+                ) {
+                    return $client;
+                }
             }
         }
 
         return false;
+    }
+
+    private function buildHostNeedles(string $host): array
+    {
+        $host = strtolower(trim($host));
+        $labels = preg_split('/[.\-]+/', $host) ?: [];
+        $needles = [$host];
+
+        foreach ($labels as $label) {
+            if ($label === '' || in_array($label, ['com', 'net', 'org', 'io', 'app', 'co'], true)) {
+                continue;
+            }
+
+            $needles[] = $label;
+
+            foreach (['support', 'portal', 'client', 'next', 'app'] as $suffix) {
+                if (str_ends_with($label, $suffix)) {
+                    $trimmed = substr($label, 0, -strlen($suffix));
+                    if (strlen($trimmed) >= 4) {
+                        $needles[] = $trimmed;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($needles)));
+    }
+
+    private function normalizeNeedle(string $value): string
+    {
+        return strtolower((string) preg_replace('/[^a-z0-9]+/', '', $value));
     }
 
     private function findFirstClientWithSupportProject(): array|false
