@@ -20,6 +20,22 @@ class SupportTickets
 
     public function getPortalTickets(int $projectId, int $userId): array
     {
+        return $this->getTicketsForProjects([$projectId], $userId);
+    }
+
+    public function getPortalTicket(int $projectId, int $userId, int $ticketId): TicketModel|false
+    {
+        return $this->getTicketForProjects([$projectId], $userId, $ticketId);
+    }
+
+    public function getTicketsForProjects(array $projectIds, int $userId): array
+    {
+        $projectIds = array_values(array_filter(array_map('intval', $projectIds)));
+
+        if (count($projectIds) === 0) {
+            return [];
+        }
+
         $results = $this->connection->table('zp_tickets')
             ->select([
                 'id',
@@ -36,7 +52,7 @@ class SupportTickets
                 'tags',
                 'modified',
             ])
-            ->where('projectId', $projectId)
+            ->whereIn('projectId', $projectIds)
             ->where('userId', $userId)
             ->whereNotIn('type', ['milestone', 'subtask'])
             ->orderByDesc('modified')
@@ -45,8 +61,14 @@ class SupportTickets
         return array_map(fn ($ticket) => new TicketModel((array) $ticket), $results->toArray());
     }
 
-    public function getPortalTicket(int $projectId, int $userId, int $ticketId): TicketModel|false
+    public function getTicketForProjects(array $projectIds, int $userId, int $ticketId): TicketModel|false
     {
+        $projectIds = array_values(array_filter(array_map('intval', $projectIds)));
+
+        if (count($projectIds) === 0) {
+            return false;
+        }
+
         $ticket = $this->connection->table('zp_tickets')
             ->select([
                 'id',
@@ -64,7 +86,7 @@ class SupportTickets
                 'modified',
             ])
             ->where('id', $ticketId)
-            ->where('projectId', $projectId)
+            ->whereIn('projectId', $projectIds)
             ->where('userId', $userId)
             ->whereNotIn('type', ['milestone', 'subtask'])
             ->first();
