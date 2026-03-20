@@ -4,8 +4,11 @@ namespace Leantime\Domain\Supportcenter\Controllers;
 
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller;
+use Leantime\Domain\Auth\Models\Roles;
+use Leantime\Domain\Auth\Services\Auth as AuthService;
 use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Supportcenter\Services\GithubElevation;
 use Leantime\Domain\Supportcenter\Services\SupportProjects;
 use Leantime\Domain\Supportportal\Repositories\SupportTickets;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
@@ -23,23 +26,28 @@ class Support extends Controller
 
     private ProjectService $projectService;
 
+    private GithubElevation $githubElevation;
+
     public function init(
         SupportProjects $supportProjects,
         SupportTickets $supportTickets,
         TicketService $ticketService,
         CommentService $commentService,
         ProjectService $projectService,
+        GithubElevation $githubElevation,
     ): void {
         $this->supportProjects = $supportProjects;
         $this->supportTickets = $supportTickets;
         $this->ticketService = $ticketService;
         $this->commentService = $commentService;
         $this->projectService = $projectService;
+        $this->githubElevation = $githubElevation;
     }
 
     public function index(array $params): Response
     {
         [$projects, $project] = $this->resolveProjectsAndSelection();
+        $ownOnly = ! AuthService::userIsAtLeast(Roles::$manager, true);
 
         if ($projects === []) {
             $this->assignCommon([], false, [], [], [], []);
@@ -50,7 +58,7 @@ class Support extends Controller
         $this->supportProjects->ensureProjectAccess((int) session('userdata.id'), (int) $project['id'], $this->getCurrentClientId());
         $this->projectService->changeCurrentSessionProject((int) $project['id']);
 
-        $tickets = $this->supportTickets->getTicketsForProjects([(int) $project['id']], (int) session('userdata.id'));
+        $tickets = $this->supportTickets->getTicketsForProjects([(int) $project['id']], (int) session('userdata.id'), $ownOnly);
         $statusLabels = $this->ticketService->getStatusLabels((int) $project['id']);
 
         [$openTickets, $archivedTickets] = $this->partitionTickets($tickets, $statusLabels);
@@ -124,9 +132,10 @@ class Support extends Controller
             return $this->tpl->display('errors.error404', responseCode: 404);
         }
 
+        $ownOnly = ! AuthService::userIsAtLeast(Roles::$manager, true);
         $projectIds = array_map(fn ($candidate) => (int) $candidate['id'], $projects);
         $ticketId = (int) ($params['id'] ?? 0);
-        $ticket = $this->supportTickets->getTicketForProjects($projectIds, (int) session('userdata.id'), $ticketId);
+        $ticket = $this->supportTickets->getTicketForProjects($projectIds, (int) session('userdata.id'), $ticketId, $ownOnly);
 
         if ($ticket === false) {
             return $this->tpl->display('errors.error404', responseCode: 404);
@@ -168,8 +177,32 @@ class Support extends Controller
         $this->assignCommon($projects, $currentProject, $statusLabels, [], [], []);
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('comments', $comments);
+        $this->tpl->assign('githubIssue', $this->githubElevation->getTicketGithubIssue($ticketId));
+        $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
 
         return $this->tpl->display('supportcenter.show');
+    }
+
+    public function elevateGithub(array $params): Response
+    {
+        if (! AuthService::userIsAtLeast(Roles::$manager, true)) {
+            return $this->tpl->display('errors.error403', responseCode: 403);
+        }
+
+        [$projects] = $this->resolveProjectsAndSelection();
+        $projectIds = array_map(fn ($candidate) => (int) $candidate['id'], $projects);
+        $ticketId = (int) ($params['id'] ?? 0);
+        $ticket = $this->supportTickets->getTicketForProjects($projectIds, (int) session('userdata.id'), $ticketId, false);
+
+        if ($ticket === false) {
+            return $this->tpl->display('errors.error404', responseCode: 404);
+        }
+
+        $result = $this->githubElevation->createGithubIssue($ticketId, $ticket, $this->incomingRequest->all());
+
+        $this->tpl->setNotification($result['message'], $result['ok'] ? 'success' : 'error');
+
+        return Frontcontroller::redirect(BASE_URL.'/support-center/'.$ticketId.'?projectId='.(int) $ticket->projectId);
     }
 
     private function resolveProjectsAndSelection(): array
