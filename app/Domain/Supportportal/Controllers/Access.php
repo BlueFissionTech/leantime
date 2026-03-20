@@ -43,7 +43,7 @@ class Access extends Controller
 
         $this->assignPortal($portal);
 
-        return $this->tpl->display('supportportal.login', 'supportportal');
+        return $this->tpl->display('global::supportportal.login', 'supportportal');
     }
 
     public function register(array $params): Response
@@ -59,7 +59,7 @@ class Access extends Controller
 
         $this->assignPortal($portal);
 
-        return $this->tpl->display('supportportal.register', 'supportportal');
+        return $this->tpl->display('global::supportportal.register', 'supportportal');
     }
 
     public function logout(array $params): Response

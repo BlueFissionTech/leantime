@@ -211,6 +211,26 @@ class AuthCheck
 
     private function resolveSupportPortal(IncomingRequest $request): array|false
     {
+        $host = strtolower(trim($request->getHost()));
+
+        if ($host !== '') {
+            $directEnv = env('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
+            if (is_string($directEnv) && $directEnv !== '') {
+                $decoded = json_decode($directEnv, true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+
+            $mapEnv = env('LEAN_SUPPORT_PORTALS');
+            if (is_string($mapEnv) && $mapEnv !== '') {
+                $decoded = json_decode($mapEnv, true);
+                if (is_array($decoded) && isset($decoded[$host]) && is_array($decoded[$host])) {
+                    return $decoded[$host];
+                }
+            }
+        }
+
         $resolverClass = \Leantime\Domain\Supportportal\Services\PortalResolver::class;
 
         if (! class_exists($resolverClass)) {
