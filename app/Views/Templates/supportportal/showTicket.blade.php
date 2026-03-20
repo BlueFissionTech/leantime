@@ -31,7 +31,7 @@
                             <strong>{{ trim(($comment['firstname'] ?? '').' '.($comment['lastname'] ?? '')) }}</strong>
                             <span>{{ $comment['date'] }}</span>
                         </div>
-                        <div class="support-richtext">{!! nl2br(e($comment['text'])) !!}</div>
+                        <div class="support-richtext">{!! nl2br(e(strip_tags((string) ($comment['text'] ?? '')))) !!}</div>
                     </article>
                 @endforeach
             </div>
