@@ -31,7 +31,7 @@ class GithubElevation
             return ['ok' => false, 'message' => 'This ticket is already elevated to GitHub.'];
         }
 
-        $repo = trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_REPO'));
+        $repo = $this->normalizeRepository(trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_REPO')));
         $token = trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_TOKEN'));
         $labels = trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_LABELS'));
         $baseUrl = rtrim((string) ($this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_BASE_URL') ?: 'https://api.github.com'), '/');
@@ -53,8 +53,9 @@ class GithubElevation
         $labelList = array_values(array_filter(array_map('trim', explode(',', $labels))));
 
         $response = Http::withoutVerifying()
+            ->withToken($token)
+            ->withUserAgent('BlueFission-Leantime-Supportcenter')
             ->withHeaders([
-                'Authorization' => 'Bearer '.$token,
                 'Accept' => 'application/vnd.github+json',
                 'X-GitHub-Api-Version' => '2022-11-28',
             ])
@@ -65,7 +66,13 @@ class GithubElevation
             ]);
 
         if (! $response->successful()) {
-            return ['ok' => false, 'message' => 'GitHub issue creation failed: '.$response->status()];
+            $message = trim((string) ($response->json('message') ?? ''));
+
+            if ($message === '' && $response->status() === 404) {
+                $message = 'Repository not found or token cannot access it.';
+            }
+
+            return ['ok' => false, 'message' => 'GitHub issue creation failed: '.$response->status().($message !== '' ? ' - '.$message : '')];
         }
 
         $issue = $response->json();
@@ -116,6 +123,19 @@ class GithubElevation
     private function getSettingKey(int $ticketId): string
     {
         return 'supportcenter.ticket.'.$ticketId.'.githubIssue';
+    }
+
+    private function normalizeRepository(string $repository): string
+    {
+        if ($repository === '') {
+            return '';
+        }
+
+        $repository = preg_replace('#^https?://github\.com/#i', '', $repository) ?? $repository;
+        $repository = preg_replace('#^github\.com/#i', '', $repository) ?? $repository;
+        $repository = preg_replace('#\.git$#i', '', $repository) ?? $repository;
+
+        return trim($repository, '/');
     }
 
     private function getEnvironmentValue(string $key): mixed
