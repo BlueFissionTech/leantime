@@ -212,6 +212,10 @@ class LoadConfig extends LoadConfiguration
             return false;
         }
 
+        if (str_starts_with($host, 'support.')) {
+            return true;
+        }
+
         $directKey = 'LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host));
         if ($this->readEnvironmentValue($directKey) !== false) {
             return true;

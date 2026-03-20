@@ -251,6 +251,21 @@ class AuthCheck
         return $request->getSchemeAndHttpHost().$basePath;
     }
 
+    private function isSupportPortalHost(IncomingRequest $request): bool
+    {
+        $host = strtolower(trim($request->getHost()));
+
+        if ($host === '') {
+            return false;
+        }
+
+        if (str_starts_with($host, 'support.')) {
+            return true;
+        }
+
+        return $this->resolveSupportPortal($request) !== false;
+    }
+
     private function getSupportPortalRootRedirect(IncomingRequest $request): ?string
     {
         return null;
@@ -258,9 +273,7 @@ class AuthCheck
 
     private function isSupportPortalPublicRequest(IncomingRequest $request): bool
     {
-        $portal = $this->resolveSupportPortal($request);
-
-        if ($portal === false) {
+        if (! $this->isSupportPortalHost($request)) {
             return false;
         }
 
@@ -269,9 +282,7 @@ class AuthCheck
 
     private function getSupportPortalLoginRedirect(IncomingRequest $request): ?string
     {
-        $portal = $this->resolveSupportPortal($request);
-
-        if ($portal === false) {
+        if (! $this->isSupportPortalHost($request)) {
             return null;
         }
 
