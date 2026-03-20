@@ -58,7 +58,7 @@ class Tickets extends Controller
         $this->tpl->assign('archivedTickets', $archivedTickets);
         $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
 
-        return $this->tpl->display('supportportal.tickets', 'supportportal');
+        return $this->tpl->display('global::supportportal.tickets', 'supportportal');
     }
 
     public function new(array $params): Response
@@ -69,11 +69,12 @@ class Tickets extends Controller
         }
 
         if ($this->incomingRequest->isMethod('POST')) {
+            $payload = $this->incomingRequest->all();
             $ticketId = $this->ticketService->addTicket([
-                'headline' => trim($params['headline'] ?? ''),
-                'description' => trim($params['description'] ?? ''),
+                'headline' => trim($payload['headline'] ?? ''),
+                'description' => trim($payload['description'] ?? ''),
                 'projectId' => (int) $portal['projectId'],
-                'priority' => $params['priority'] ?? 2,
+                'priority' => $payload['priority'] ?? 2,
                 'tags' => $portal['defaultTags'],
                 'type' => 'task',
                 'status' => 3,
@@ -83,24 +84,24 @@ class Tickets extends Controller
             if (is_array($ticketId)) {
                 $this->tpl->setNotification($ticketId['msg'] ?? 'Could not create support ticket.', $ticketId['type'] ?? 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/new'));
             }
 
             if ($ticketId === false) {
                 $this->tpl->setNotification('Could not create support ticket.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/new'));
             }
 
             $this->tpl->setNotification('Support ticket created.', 'success');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+            return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
         }
 
         $this->assignPortal($portal);
         $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
 
-        return $this->tpl->display('supportportal.newTicket', 'supportportal');
+        return $this->tpl->display('global::supportportal.newTicket', 'supportportal');
     }
 
     public function show(array $params): Response
@@ -118,12 +119,13 @@ class Tickets extends Controller
         }
 
         if ($this->incomingRequest->isMethod('POST')) {
-            $text = trim($params['text'] ?? '');
+            $payload = $this->incomingRequest->all();
+            $text = trim($payload['text'] ?? '');
 
             if ($text === '') {
                 $this->tpl->setNotification('Comment text is required.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
             }
 
             $commentAdded = $this->commentService->addComment([
@@ -134,12 +136,12 @@ class Tickets extends Controller
             if (! $commentAdded) {
                 $this->tpl->setNotification('Could not add comment.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
             }
 
             $this->tpl->setNotification('Comment added.', 'success');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+            return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
         }
 
         $statusLabels = $this->ticketService->getStatusLabels((int) $portal['projectId']);
@@ -150,7 +152,7 @@ class Tickets extends Controller
         $this->tpl->assign('comments', $comments);
         $this->tpl->assign('statusLabels', $statusLabels);
 
-        return $this->tpl->display('supportportal.showTicket', 'supportportal');
+        return $this->tpl->display('global::supportportal.showTicket', 'supportportal');
     }
 
     private function resolvePortalOrRedirect(): array|Response
@@ -161,7 +163,7 @@ class Tickets extends Controller
         }
 
         if (! session()->exists('userdata.id')) {
-            return Frontcontroller::redirect($this->supportUrl('/support/login'));
+            return Frontcontroller::redirect($this->supportUrl('/login'));
         }
 
         if (! $this->portalAccess->ensurePortalSession($portal)) {

@@ -55,12 +55,16 @@ class AuthCheck
      */
     public function handle(IncomingRequest $request, Closure $next): Response
     {
+        if ($supportRootRedirect = $this->getSupportPortalRootRedirect($request)) {
+            return new RedirectResponse($supportRootRedirect);
+        }
 
-        if ($this->isPublicController($request->getCurrentRoute())) {
+        if ($this->isSupportPortalPublicRequest($request) || $this->isPublicController($request->getCurrentRoute())) {
             return $next($request);
         }
 
-        $loginRedirect = self::dispatch_filter('loginRoute', 'auth.login', ['request' => $request]);
+        $loginRedirect = $this->getSupportPortalLoginRedirect($request)
+            ?? self::dispatch_filter('loginRoute', 'auth.login', ['request' => $request]);
 
         if ($request instanceof ApiRequest) {
             self::dispatchEvent('before_api_request', ['application' => app()], 'leantime.core.middleware.apiAuth.handle');
@@ -151,13 +155,13 @@ class AuthCheck
      */
     public function redirectWithOrigin(string $route, string $origin, IncomingRequest $request): false|RedirectResponse
     {
-
+        $isAbsoluteRoute = preg_match('#^https?://#i', $route) === 1;
         $uri = ltrim(str_replace('.', '/', $route), '/');
-        $destination = BASE_URL.'/'.$uri;
+        $destination = $isAbsoluteRoute ? rtrim($route, '/') : BASE_URL.'/'.$uri;
         $originClean = Str::replaceStart('/', '', $origin);
         $queryParams = ! empty($origin) && $origin !== '/' ? '?'.http_build_query(['redirect' => $originClean]) : '';
 
-        if ($request->getCurrentRoute() === $route) {
+        if (! $isAbsoluteRoute && $request->getCurrentRoute() === $route) {
             return false;
         }
 
@@ -203,5 +207,114 @@ class AuthCheck
 
         return $routeToCheck !== null && in_array($routeToCheck, $this->publicActions, true);
 
+    }
+
+    private function resolveSupportPortal(IncomingRequest $request): array|false
+    {
+        $host = strtolower(trim($request->getHost()));
+
+        if ($host !== '') {
+            $directEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
+            if (is_string($directEnv) && $directEnv !== '') {
+                $decoded = json_decode($directEnv, true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+
+            $mapEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTALS');
+            if (is_string($mapEnv) && $mapEnv !== '') {
+                $decoded = json_decode($mapEnv, true);
+                if (is_array($decoded) && isset($decoded[$host]) && is_array($decoded[$host])) {
+                    return $decoded[$host];
+                }
+            }
+        }
+
+        $resolverClass = \Leantime\Domain\Supportportal\Services\PortalResolver::class;
+
+        if (! class_exists($resolverClass)) {
+            return false;
+        }
+
+        try {
+            return app($resolverClass)->resolveCurrentHost($request->getHost());
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function getSupportPortalBaseUrl(IncomingRequest $request): string
+    {
+        $basePath = rtrim($request->getBasePath(), '/');
+
+        return $request->getSchemeAndHttpHost().$basePath;
+    }
+
+    private function isSupportPortalHost(IncomingRequest $request): bool
+    {
+        $host = strtolower(trim($request->getHost()));
+
+        if ($host === '') {
+            return false;
+        }
+
+        if (str_starts_with($host, 'support.')) {
+            return true;
+        }
+
+        return $this->resolveSupportPortal($request) !== false;
+    }
+
+    private function getSupportPortalRootRedirect(IncomingRequest $request): ?string
+    {
+        return null;
+    }
+
+    private function isSupportPortalPublicRequest(IncomingRequest $request): bool
+    {
+        if (! $this->isSupportPortalHost($request)) {
+            return false;
+        }
+
+        return in_array($request->path(), ['/', 'login', 'register', 'support', 'support/login', 'support/register'], true);
+    }
+
+    private function getSupportPortalLoginRedirect(IncomingRequest $request): ?string
+    {
+        if (! $this->isSupportPortalHost($request)) {
+            return null;
+        }
+
+        $path = $request->path();
+
+        if (in_array($path, ['tickets', 'tickets/new'], true) || preg_match('#^tickets/\d+$#', $path)) {
+            return $this->getSupportPortalBaseUrl($request).'/login';
+        }
+
+        if ($path === 'support' || str_starts_with($path, 'support/')) {
+            return $this->getSupportPortalBaseUrl($request).'/support/login';
+        }
+
+        return null;
+    }
+
+    private function getEnvironmentValue(string $key): mixed
+    {
+        $value = getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return $_SERVER[$key];
+        }
+
+        return false;
     }
 }

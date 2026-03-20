@@ -131,6 +131,12 @@ class LoadConfig extends LoadConfiguration
         $proxies = explode(',', ($config->trustedProxies ?? '127.0.0.1,REMOTE_ADDR'));
         Request::setTrustedProxies($proxies, $this->headers);
 
+        if (! empty($app['request']) && $this->isConfiguredSupportHost($app['request']->getHost())) {
+            $appUrl = $app['request']->getSchemeAndHttpHost();
+            $config->set('appUrl', $appUrl);
+            $config->set('app.url', $appUrl);
+        }
+
         if (! defined('BASE_URL')) {
             if (isset($appUrl) && ! empty($appUrl)) {
                 define('BASE_URL', $appUrl);
@@ -197,4 +203,50 @@ class LoadConfig extends LoadConfiguration
     }
 
     public function configValidation() {}
+
+    private function isConfiguredSupportHost(string $host): bool
+    {
+        $host = strtolower(trim($host));
+
+        if ($host === '') {
+            return false;
+        }
+
+        if (str_starts_with($host, 'support.')) {
+            return true;
+        }
+
+        $directKey = 'LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host));
+        if ($this->readEnvironmentValue($directKey) !== false) {
+            return true;
+        }
+
+        $map = $this->readEnvironmentValue('LEAN_SUPPORT_PORTALS');
+        if (is_string($map) && $map !== '') {
+            $decoded = json_decode($map, true);
+
+            return is_array($decoded) && isset($decoded[$host]) && is_array($decoded[$host]);
+        }
+
+        return false;
+    }
+
+    private function readEnvironmentValue(string $key): mixed
+    {
+        $value = getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return $_SERVER[$key];
+        }
+
+        return false;
+    }
 }

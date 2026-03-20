@@ -12,6 +12,7 @@ class Header extends Composer
 {
     public static array $views = [
         'global::sections.header',
+        'global::layouts.supportportal',
     ];
 
     private Environment $config;

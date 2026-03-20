@@ -36,11 +36,11 @@ class Home extends Controller
         if (session()->exists('userdata.id')) {
             $this->portalAccess->ensurePortalSession($portal);
 
-            return Frontcontroller::redirect($this->supportUrl('/support/tickets'));
+            return Frontcontroller::redirect($this->supportUrl('/tickets'));
         }
 
         $this->assignPortal($portal);
 
-        return $this->tpl->display('supportportal.home', 'supportportal');
+        return $this->tpl->display('global::supportportal.home', 'supportportal');
     }
 }

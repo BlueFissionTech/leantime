@@ -1,3 +1,9 @@
+@php
+    $isFirstLogin = $isFirstLogin ?? false;
+    $showHelperModal = $showHelperModal ?? false;
+    $currentModal = $currentModal ?? [];
+@endphp
+
 <script>
     jQuery(document).ready(function () {
 
