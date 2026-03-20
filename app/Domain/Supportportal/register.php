@@ -2,6 +2,7 @@
 
 use Leantime\Core\Events\EventDispatcher;
 use Leantime\Domain\Supportportal\Middleware\SupportHostRedirect;
+use Leantime\Domain\Supportportal\Services\PortalResolver;
 
 EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.*.publicActions', function ($actions) {
     $actions[] = 'support';
