@@ -2,7 +2,7 @@
     New Support Ticket
 </x-global::pageheader>
 
-@include('supportcenter.partials.assetStyles')
+@include('supportcenter::partials.assetStyles')
 
 <div class="maincontent">
     <div class="maincontentinner">

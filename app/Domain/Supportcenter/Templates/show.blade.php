@@ -2,7 +2,7 @@
     Ticket #{{ $ticket->id }}
 </x-global::pageheader>
 
-@include('supportcenter.partials.assetStyles')
+@include('supportcenter::partials.assetStyles')
 
 <div class="maincontent">
     <div class="maincontentinner supportcenter-shell">
