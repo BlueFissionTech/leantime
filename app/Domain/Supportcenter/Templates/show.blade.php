@@ -1,10 +1,13 @@
 <x-global::pageheader :icon="'fa fa-life-ring'">
-    Ticket #{{ $ticket->id }}
+    <h5>Customer Support</h5>
+    <h1 class="articleHeadline">Ticket #{{ $ticket->id }}</h1>
 </x-global::pageheader>
 
 @include('supportcenter::partials.assetStyles')
 
 <div class="maincontent">
+    {!! $tpl->displayNotification() !!}
+
     <div class="maincontentinner supportcenter-shell">
         <p>
             <a class="btn btn-default" href="{{ BASE_URL }}/support-center?projectId={{ $ticket->projectId }}">Back to Tickets</a>
