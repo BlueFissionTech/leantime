@@ -76,10 +76,12 @@ class Access extends Controller
             return $this->tpl->display('errors.error404', responseCode: 404);
         }
 
+        $payload = $this->incomingRequest->all();
+
         $result = $this->portalAccess->loginAndScope(
             $portal,
-            $params['email'] ?? '',
-            $params['password'] ?? ''
+            $payload['email'] ?? '',
+            $payload['password'] ?? ''
         );
 
         if (! $result['ok']) {
@@ -98,13 +100,15 @@ class Access extends Controller
             return $this->tpl->display('errors.error404', responseCode: 404);
         }
 
+        $payload = $this->incomingRequest->all();
+
         if (! $portal['allowSelfSignup']) {
             $this->tpl->setNotification('This support portal does not allow self-signup.', 'error');
 
             return Frontcontroller::redirect($this->supportUrl('/login'));
         }
 
-        $result = $this->portalAccess->registerAndLogin($portal, $params);
+        $result = $this->portalAccess->registerAndLogin($portal, $payload);
 
         if (! $result['ok']) {
             $this->tpl->setNotification($result['message'], 'error');

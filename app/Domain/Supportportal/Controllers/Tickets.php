@@ -69,11 +69,12 @@ class Tickets extends Controller
         }
 
         if ($this->incomingRequest->isMethod('POST')) {
+            $payload = $this->incomingRequest->all();
             $ticketId = $this->ticketService->addTicket([
-                'headline' => trim($params['headline'] ?? ''),
-                'description' => trim($params['description'] ?? ''),
+                'headline' => trim($payload['headline'] ?? ''),
+                'description' => trim($payload['description'] ?? ''),
                 'projectId' => (int) $portal['projectId'],
-                'priority' => $params['priority'] ?? 2,
+                'priority' => $payload['priority'] ?? 2,
                 'tags' => $portal['defaultTags'],
                 'type' => 'task',
                 'status' => 3,
@@ -118,7 +119,8 @@ class Tickets extends Controller
         }
 
         if ($this->incomingRequest->isMethod('POST')) {
-            $text = trim($params['text'] ?? '');
+            $payload = $this->incomingRequest->all();
+            $text = trim($payload['text'] ?? '');
 
             if ($text === '') {
                 $this->tpl->setNotification('Comment text is required.', 'error');

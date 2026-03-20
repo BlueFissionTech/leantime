@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html dir="{{ __('language.direction') }}" lang="{{ __('language.code') }}">
 <head>
-    <title>{{ $sitename }}</title>
+    <title>{{ $portalBrandName }}</title>
     <meta name="requestId" content="{{ \Illuminate\Support\Str::random(4) }}">
-    <meta name="description" content="{{ $sitename }}">
+    <meta name="description" content="{{ $portalBrandName }}">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">

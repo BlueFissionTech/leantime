@@ -10,7 +10,7 @@ trait ProvidesPortalViewData
         $supportHomeUrl = $supportBaseUrl;
 
         $this->tpl->assign('portal', $portal);
-        $this->tpl->assign('sitename', $portal['brandName'].' Support');
+        $this->tpl->assign('sitename', $portal['brandName']);
         $this->tpl->assign('portalBrandName', $portal['brandName']);
         $this->tpl->assign('portalLogoUrl', $portal['brandLogo']);
         $this->tpl->assign('primaryColor', $portal['primaryColor']);
