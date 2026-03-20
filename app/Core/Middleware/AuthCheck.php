@@ -151,13 +151,13 @@ class AuthCheck
      */
     public function redirectWithOrigin(string $route, string $origin, IncomingRequest $request): false|RedirectResponse
     {
-
+        $isAbsoluteRoute = preg_match('#^https?://#i', $route) === 1;
         $uri = ltrim(str_replace('.', '/', $route), '/');
-        $destination = BASE_URL.'/'.$uri;
+        $destination = $isAbsoluteRoute ? rtrim($route, '/') : BASE_URL.'/'.$uri;
         $originClean = Str::replaceStart('/', '', $origin);
         $queryParams = ! empty($origin) && $origin !== '/' ? '?'.http_build_query(['redirect' => $originClean]) : '';
 
-        if ($request->getCurrentRoute() === $route) {
+        if (! $isAbsoluteRoute && $request->getCurrentRoute() === $route) {
             return false;
         }
 

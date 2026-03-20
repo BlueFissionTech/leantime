@@ -11,7 +11,7 @@
                 <span>Updated: {{ $ticket->modified }}</span>
             </div>
         </div>
-        <a class="support-button secondary" href="{{ BASE_URL }}/support/tickets">Back to Tickets</a>
+        <a class="support-button secondary" href="{{ $supportTicketsUrl }}">Back to Tickets</a>
     </div>
 
     <section class="support-panel support-ticket-body">
@@ -37,7 +37,7 @@
             </div>
         @endif
 
-        <form method="post" action="{{ BASE_URL }}/support/tickets/{{ $ticket->id }}" class="support-form support-comment-form">
+        <form method="post" action="{{ $supportTicketsUrl }}/{{ $ticket->id }}" class="support-form support-comment-form">
             <label>
                 <span>Add Comment</span>
                 <textarea name="text" rows="6" required></textarea>

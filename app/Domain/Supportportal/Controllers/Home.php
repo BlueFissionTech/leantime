@@ -4,12 +4,15 @@ namespace Leantime\Domain\Supportportal\Controllers;
 
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller;
+use Leantime\Domain\Supportportal\Controllers\Concerns\ProvidesPortalViewData;
 use Leantime\Domain\Supportportal\Services\PortalAccess;
 use Leantime\Domain\Supportportal\Services\PortalResolver;
 use Symfony\Component\HttpFoundation\Response;
 
 class Home extends Controller
 {
+    use ProvidesPortalViewData;
+
     private PortalResolver $portalResolver;
 
     private PortalAccess $portalAccess;
@@ -33,21 +36,11 @@ class Home extends Controller
         if (session()->exists('userdata.id')) {
             $this->portalAccess->ensurePortalSession($portal);
 
-            return Frontcontroller::redirect(BASE_URL.'/support/tickets');
+            return Frontcontroller::redirect($this->supportUrl('/support/tickets'));
         }
 
         $this->assignPortal($portal);
 
         return $this->tpl->display('supportportal.home', 'supportportal');
-    }
-
-    protected function assignPortal(array $portal): void
-    {
-        $this->tpl->assign('portal', $portal);
-        $this->tpl->assign('sitename', $portal['brandName'].' Support');
-        $this->tpl->assign('portalBrandName', $portal['brandName']);
-        $this->tpl->assign('portalLogoUrl', $portal['brandLogo']);
-        $this->tpl->assign('primaryColor', $portal['primaryColor']);
-        $this->tpl->assign('secondaryColor', $portal['secondaryColor']);
     }
 }

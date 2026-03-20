@@ -5,6 +5,7 @@ namespace Leantime\Domain\Supportportal\Controllers;
 use Leantime\Core\Controller\Controller;
 use Leantime\Core\Controller\Frontcontroller;
 use Leantime\Domain\Comments\Services\Comments as CommentService;
+use Leantime\Domain\Supportportal\Controllers\Concerns\ProvidesPortalViewData;
 use Leantime\Domain\Supportportal\Repositories\SupportTickets;
 use Leantime\Domain\Supportportal\Services\PortalAccess;
 use Leantime\Domain\Supportportal\Services\PortalResolver;
@@ -13,6 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class Tickets extends Controller
 {
+    use ProvidesPortalViewData;
+
     private PortalResolver $portalResolver;
 
     private PortalAccess $portalAccess;
@@ -80,18 +83,18 @@ class Tickets extends Controller
             if (is_array($ticketId)) {
                 $this->tpl->setNotification($ticketId['msg'] ?? 'Could not create support ticket.', $ticketId['type'] ?? 'error');
 
-                return Frontcontroller::redirect(BASE_URL.'/support/tickets/new');
+                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
             }
 
             if ($ticketId === false) {
                 $this->tpl->setNotification('Could not create support ticket.', 'error');
 
-                return Frontcontroller::redirect(BASE_URL.'/support/tickets/new');
+                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
             }
 
             $this->tpl->setNotification('Support ticket created.', 'success');
 
-            return Frontcontroller::redirect(BASE_URL.'/support/tickets/'.$ticketId);
+            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
         }
 
         $this->assignPortal($portal);
@@ -120,7 +123,7 @@ class Tickets extends Controller
             if ($text === '') {
                 $this->tpl->setNotification('Comment text is required.', 'error');
 
-                return Frontcontroller::redirect(BASE_URL.'/support/tickets/'.$ticketId);
+                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
             }
 
             $commentAdded = $this->commentService->addComment([
@@ -131,12 +134,12 @@ class Tickets extends Controller
             if (! $commentAdded) {
                 $this->tpl->setNotification('Could not add comment.', 'error');
 
-                return Frontcontroller::redirect(BASE_URL.'/support/tickets/'.$ticketId);
+                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
             }
 
             $this->tpl->setNotification('Comment added.', 'success');
 
-            return Frontcontroller::redirect(BASE_URL.'/support/tickets/'.$ticketId);
+            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
         }
 
         $statusLabels = $this->ticketService->getStatusLabels((int) $portal['projectId']);
@@ -158,7 +161,7 @@ class Tickets extends Controller
         }
 
         if (! session()->exists('userdata.id')) {
-            return Frontcontroller::redirect(BASE_URL.'/support/login');
+            return Frontcontroller::redirect($this->supportUrl('/support/login'));
         }
 
         if (! $this->portalAccess->ensurePortalSession($portal)) {
@@ -167,17 +170,6 @@ class Tickets extends Controller
 
         return $portal;
     }
-
-    private function assignPortal(array $portal): void
-    {
-        $this->tpl->assign('portal', $portal);
-        $this->tpl->assign('sitename', $portal['brandName'].' Support');
-        $this->tpl->assign('portalBrandName', $portal['brandName']);
-        $this->tpl->assign('portalLogoUrl', $portal['brandLogo']);
-        $this->tpl->assign('primaryColor', $portal['primaryColor']);
-        $this->tpl->assign('secondaryColor', $portal['secondaryColor']);
-    }
-
     private function partitionTickets(array $tickets, array $statusLabels): array
     {
         $openTickets = [];

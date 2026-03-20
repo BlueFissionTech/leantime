@@ -7,11 +7,11 @@
             <span class="support-eyebrow">{{ $portal['productName'] }}</span>
             <h1>New Support Ticket</h1>
         </div>
-        <a class="support-button secondary" href="{{ BASE_URL }}/support/tickets">Back to Tickets</a>
+        <a class="support-button secondary" href="{{ $supportTicketsUrl }}">Back to Tickets</a>
     </div>
 
     <div class="support-panel">
-        <form method="post" action="{{ BASE_URL }}/support/tickets/new" class="support-form">
+        <form method="post" action="{{ $supportNewTicketUrl }}" class="support-form">
             <label>
                 <span>Subject</span>
                 <input type="text" name="headline" required />
