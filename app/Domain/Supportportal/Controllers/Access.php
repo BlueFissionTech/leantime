@@ -66,7 +66,7 @@ class Access extends Controller
     {
         $this->authService->logout();
 
-        return Frontcontroller::redirect($this->supportUrl('/support'));
+        return Frontcontroller::redirect($this->supportUrl('/'));
     }
 
     private function postLogin(array $params): Response
@@ -85,10 +85,10 @@ class Access extends Controller
         if (! $result['ok']) {
             $this->tpl->setNotification($result['message'], 'error');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/login'));
+            return Frontcontroller::redirect($this->supportUrl('/login'));
         }
 
-        return Frontcontroller::redirect($this->supportUrl('/support/tickets'));
+        return Frontcontroller::redirect($this->supportUrl('/tickets'));
     }
 
     private function postRegister(array $params): Response
@@ -101,7 +101,7 @@ class Access extends Controller
         if (! $portal['allowSelfSignup']) {
             $this->tpl->setNotification('This support portal does not allow self-signup.', 'error');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/login'));
+            return Frontcontroller::redirect($this->supportUrl('/login'));
         }
 
         $result = $this->portalAccess->registerAndLogin($portal, $params);
@@ -109,9 +109,9 @@ class Access extends Controller
         if (! $result['ok']) {
             $this->tpl->setNotification($result['message'], 'error');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/register'));
+            return Frontcontroller::redirect($this->supportUrl('/register'));
         }
 
-        return Frontcontroller::redirect($this->supportUrl('/support/tickets'));
+        return Frontcontroller::redirect($this->supportUrl('/tickets'));
     }
 }

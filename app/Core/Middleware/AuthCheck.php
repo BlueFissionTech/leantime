@@ -214,7 +214,7 @@ class AuthCheck
         $host = strtolower(trim($request->getHost()));
 
         if ($host !== '') {
-            $directEnv = env('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
+            $directEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
             if (is_string($directEnv) && $directEnv !== '') {
                 $decoded = json_decode($directEnv, true);
                 if (is_array($decoded)) {
@@ -222,7 +222,7 @@ class AuthCheck
                 }
             }
 
-            $mapEnv = env('LEAN_SUPPORT_PORTALS');
+            $mapEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTALS');
             if (is_string($mapEnv) && $mapEnv !== '') {
                 $decoded = json_decode($mapEnv, true);
                 if (is_array($decoded) && isset($decoded[$host]) && is_array($decoded[$host])) {
@@ -248,20 +248,12 @@ class AuthCheck
     {
         $basePath = rtrim($request->getBasePath(), '/');
 
-        return $request->getSchemeAndHttpHost().$basePath.'/support';
+        return $request->getSchemeAndHttpHost().$basePath;
     }
 
     private function getSupportPortalRootRedirect(IncomingRequest $request): ?string
     {
-        $portal = $this->resolveSupportPortal($request);
-
-        if ($portal === false) {
-            return null;
-        }
-
-        $path = $request->path();
-
-        return ($path === '/' || $path === '') ? $this->getSupportPortalBaseUrl($request) : null;
+        return null;
     }
 
     private function isSupportPortalPublicRequest(IncomingRequest $request): bool
@@ -272,7 +264,7 @@ class AuthCheck
             return false;
         }
 
-        return in_array($request->path(), ['support', 'support/login', 'support/register'], true);
+        return in_array($request->path(), ['/', 'login', 'register', 'support', 'support/login', 'support/register'], true);
     }
 
     private function getSupportPortalLoginRedirect(IncomingRequest $request): ?string
@@ -285,10 +277,33 @@ class AuthCheck
 
         $path = $request->path();
 
-        if ($path === 'support' || str_starts_with($path, 'support/')) {
+        if (in_array($path, ['tickets', 'tickets/new'], true) || preg_match('#^tickets/\d+$#', $path)) {
             return $this->getSupportPortalBaseUrl($request).'/login';
         }
 
+        if ($path === 'support' || str_starts_with($path, 'support/')) {
+            return $this->getSupportPortalBaseUrl($request).'/support/login';
+        }
+
         return null;
+    }
+
+    private function getEnvironmentValue(string $key): mixed
+    {
+        $value = getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return $_SERVER[$key];
+        }
+
+        return false;
     }
 }
