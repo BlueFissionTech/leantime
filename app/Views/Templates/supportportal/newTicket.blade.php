@@ -11,10 +11,10 @@
     </div>
 
     <div class="support-panel">
-        <form method="post" action="{{ $supportNewTicketUrl }}" class="support-form">
+        <form method="post" action="{{ $supportNewTicketUrl }}" class="support-form support-editor">
             <label>
                 <span>Subject</span>
-                <input type="text" name="headline" required />
+                <input type="text" name="headline" value="{{ old('headline') }}" required />
             </label>
             <label>
                 <span>Priority</span>
@@ -26,10 +26,20 @@
             </label>
             <label>
                 <span>Description</span>
-                <textarea name="description" rows="10" required></textarea>
+                <textarea name="description" rows="10" class="tiptapComplex" required>{{ old('description') }}</textarea>
             </label>
             <button type="submit" class="support-button primary">Create Ticket</button>
         </form>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.leantime && window.leantime.tiptapController) {
+            window.leantime.tiptapController.initComplexEditor();
+        }
+    });
+</script>
+@endpush

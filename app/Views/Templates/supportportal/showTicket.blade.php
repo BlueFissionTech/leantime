@@ -16,7 +16,7 @@
 
     <section class="support-panel support-ticket-body">
         <h2>Description</h2>
-        <div class="support-richtext">{!! nl2br(e(strip_tags((string) $ticket->description))) !!}</div>
+        <div class="support-richtext">{!! $tpl->escapeMinimal((string) $ticket->description) !!}</div>
     </section>
 
     <section class="support-panel support-ticket-body">
@@ -31,19 +31,30 @@
                             <strong>{{ trim(($comment['firstname'] ?? '').' '.($comment['lastname'] ?? '')) }}</strong>
                             <span>{{ $comment['date'] }}</span>
                         </div>
-                        <div class="support-richtext">{!! nl2br(e(strip_tags((string) ($comment['text'] ?? '')))) !!}</div>
+                        <div class="support-richtext">{!! $tpl->escapeMinimal((string) ($comment['text'] ?? '')) !!}</div>
                     </article>
                 @endforeach
             </div>
         @endif
 
-        <form method="post" action="{{ $supportTicketsUrl }}/{{ $ticket->id }}" class="support-form support-comment-form">
+        <form method="post" action="{{ $supportTicketsUrl }}/{{ $ticket->id }}" class="support-form support-comment-form support-editor">
+            <input type="hidden" name="ticketId" value="{{ $ticket->id }}" />
             <label>
                 <span>Add Comment</span>
-                <textarea name="text" rows="6" required></textarea>
+                <textarea name="text" rows="6" class="tiptapSimple" required></textarea>
             </label>
             <button type="submit" class="support-button primary">Post Comment</button>
         </form>
     </section>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.leantime && window.leantime.tiptapController) {
+            window.leantime.tiptapController.initSimpleEditor();
+        }
+    });
+</script>
+@endpush
