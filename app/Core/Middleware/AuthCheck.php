@@ -214,7 +214,7 @@ class AuthCheck
         $host = strtolower(trim($request->getHost()));
 
         if ($host !== '') {
-            $directEnv = env('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
+            $directEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host)));
             if (is_string($directEnv) && $directEnv !== '') {
                 $decoded = json_decode($directEnv, true);
                 if (is_array($decoded)) {
@@ -222,7 +222,7 @@ class AuthCheck
                 }
             }
 
-            $mapEnv = env('LEAN_SUPPORT_PORTALS');
+            $mapEnv = $this->getEnvironmentValue('LEAN_SUPPORT_PORTALS');
             if (is_string($mapEnv) && $mapEnv !== '') {
                 $decoded = json_decode($mapEnv, true);
                 if (is_array($decoded) && isset($decoded[$host]) && is_array($decoded[$host])) {
@@ -290,5 +290,24 @@ class AuthCheck
         }
 
         return null;
+    }
+
+    private function getEnvironmentValue(string $key): mixed
+    {
+        $value = getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return $_SERVER[$key];
+        }
+
+        return false;
     }
 }

@@ -25,22 +25,26 @@ class PortalResolver
             return false;
         }
 
-        $configuredPortal = $this->resolveConfiguredPortal($host);
-        if ($configuredPortal !== false) {
-            return $configuredPortal;
-        }
+        try {
+            $configuredPortal = $this->resolveConfiguredPortal($host);
+            if ($configuredPortal !== false) {
+                return $configuredPortal;
+            }
 
-        return $this->resolveSeedPortal($host);
+            return $this->resolveSeedPortal($host);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function resolveConfiguredPortal(string $host): array|false
     {
-        $envPortal = $this->decodePortalConfig(env('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host))));
+        $envPortal = $this->decodePortalConfig($this->getEnvironmentValue('LEAN_SUPPORT_PORTAL_'.strtoupper(str_replace(['.', '-'], '_', $host))));
         if ($envPortal !== false) {
             return $this->normalizePortal($envPortal, $host);
         }
 
-        $envPortalMap = $this->decodePortalConfig(env('LEAN_SUPPORT_PORTALS'));
+        $envPortalMap = $this->decodePortalConfig($this->getEnvironmentValue('LEAN_SUPPORT_PORTALS'));
         if (is_array($envPortalMap) && isset($envPortalMap[$host]) && is_array($envPortalMap[$host])) {
             return $this->normalizePortal($envPortalMap[$host], $host);
         }
@@ -146,6 +150,25 @@ class PortalResolver
         $decoded = json_decode($value, true);
 
         return is_array($decoded) ? $decoded : false;
+    }
+
+    private function getEnvironmentValue(string $key): mixed
+    {
+        $value = getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return $_SERVER[$key];
+        }
+
+        return false;
     }
 
     private function findClientByNeedle(string $needle): array|false
