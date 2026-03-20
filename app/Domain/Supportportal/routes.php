@@ -69,6 +69,19 @@ foreach (supportPortalConfiguredHosts() as $supportHost) {
     });
 }
 
+Route::domain('support.{domain}')
+    ->where(['domain' => '.*'])
+    ->group(function () {
+        Route::match(['get'], '/', [Home::class, 'get']);
+        Route::match(['get', 'post'], '/login', [Access::class, 'login']);
+        Route::match(['get', 'post'], '/register', [Access::class, 'register']);
+        Route::post('/logout', [Access::class, 'logout']);
+
+        Route::match(['get'], '/tickets', [Tickets::class, 'index']);
+        Route::match(['get', 'post'], '/tickets/new', [Tickets::class, 'new']);
+        Route::match(['get', 'post'], '/tickets/{id}', [Tickets::class, 'show'])->whereNumber('id');
+    });
+
 Route::match(['get'], '/support', [Home::class, 'get']);
 Route::match(['get', 'post'], '/support/login', [Access::class, 'login']);
 Route::match(['get', 'post'], '/support/register', [Access::class, 'register']);
