@@ -2,8 +2,6 @@
     New Support Ticket
 </x-global::pageheader>
 
-@include('supportcenter.partials.styles')
-
 <div class="maincontent">
     <div class="maincontentinner">
         @if(count($supportProjects) === 0)
