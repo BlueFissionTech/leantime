@@ -22,6 +22,46 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
+                <strong>Engineering Elevation</strong>
+            </div>
+            <div class="panel-body">
+                @if($githubIssue !== false)
+                    <p>
+                        <strong>Status:</strong> Elevated to GitHub
+                    </p>
+                    <p>
+                        <strong>Issue:</strong>
+                        <a href="{{ $githubIssue['url'] }}" target="_blank" rel="noopener noreferrer">#{{ $githubIssue['number'] }}</a>
+                    </p>
+                @elseif($canElevateGitHub)
+                    <p class="text-muted">Use this when the issue has been validated as an engineering/code issue. Keep the GitHub text sanitized for public visibility.</p>
+                    <form method="post" action="{{ BASE_URL }}/support-center/{{ $ticket->id }}/elevate-github?projectId={{ $ticket->projectId }}">
+                        <div class="form-group">
+                            <label for="githubTitle">GitHub Title</label>
+                            <input id="githubTitle" type="text" name="githubTitle" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="githubSummary">Technical Summary</label>
+                            <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="githubReproduction">Reproduction Notes</label>
+                            <textarea id="githubReproduction" name="githubReproduction" rows="4" class="form-control"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="githubImpact">Impact</label>
+                            <textarea id="githubImpact" name="githubImpact" rows="3" class="form-control"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Elevate to GitHub</button>
+                    </form>
+                @else
+                    <p class="text-muted">Only manager-level users and above can elevate support tickets to GitHub.</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 <strong>Comments</strong>
             </div>
             <div class="panel-body">
