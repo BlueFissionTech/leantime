@@ -1,10 +1,13 @@
 <x-global::pageheader :icon="'fa fa-life-ring'">
-    Support Center
+    <h5>Customer Support</h5>
+    <h1 class="articleHeadline">Support Center</h1>
 </x-global::pageheader>
 
 @include('supportcenter::partials.assetStyles')
 
 <div class="maincontent">
+    {!! $tpl->displayNotification() !!}
+
     <div class="maincontentinner supportcenter-shell">
         @if(count($supportProjects) === 0)
             <div class="alert alert-info">
