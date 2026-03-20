@@ -16,7 +16,9 @@ EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.loginRo
     $path = $request?->path() ?? '';
 
     if ($path === 'support' || str_starts_with($path, 'support/')) {
-        return 'support.login';
+        $basePath = rtrim($request?->getBasePath() ?? '', '/');
+
+        return $request->getSchemeAndHttpHost().$basePath.'/support/login';
     }
 
     return $route;
