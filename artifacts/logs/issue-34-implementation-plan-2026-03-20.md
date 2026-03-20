@@ -1,0 +1,19 @@
+# Issue 34 - GitHub Elevation
+
+## First Slice
+- Internal-only GitHub elevation from the internal support center
+- Manager+ role requirement
+- Manual sanitized GitHub title/summary form
+- GitHub issue creation through env-configured repository/token
+- Ticket linkage metadata stored in settings
+
+## Config
+- `LEAN_SUPPORT_GITHUB_REPO=owner/repo`
+- `LEAN_SUPPORT_GITHUB_TOKEN=<token>`
+- `LEAN_SUPPORT_GITHUB_LABELS=support,engineering`
+- optional: `LEAN_SUPPORT_GITHUB_BASE_URL=https://api.github.com`
+
+## Follow-up
+- Move ticket linkage metadata to a dedicated table or relationship model
+- Add issue-status sync back from GitHub
+- Add richer repo mapping by support project/product

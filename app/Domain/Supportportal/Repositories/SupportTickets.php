@@ -28,7 +28,7 @@ class SupportTickets
         return $this->getTicketForProjects([$projectId], $userId, $ticketId);
     }
 
-    public function getTicketsForProjects(array $projectIds, int $userId): array
+    public function getTicketsForProjects(array $projectIds, int $userId, bool $ownOnly = true): array
     {
         $projectIds = array_values(array_filter(array_map('intval', $projectIds)));
 
@@ -53,15 +53,15 @@ class SupportTickets
                 'modified',
             ])
             ->whereIn('projectId', $projectIds)
-            ->where('userId', $userId)
             ->whereNotIn('type', ['milestone', 'subtask'])
             ->orderByDesc('modified')
+            ->when($ownOnly, fn ($query) => $query->where('userId', $userId))
             ->get();
 
         return array_map(fn ($ticket) => new TicketModel((array) $ticket), $results->toArray());
     }
 
-    public function getTicketForProjects(array $projectIds, int $userId, int $ticketId): TicketModel|false
+    public function getTicketForProjects(array $projectIds, int $userId, int $ticketId, bool $ownOnly = true): TicketModel|false
     {
         $projectIds = array_values(array_filter(array_map('intval', $projectIds)));
 
@@ -87,8 +87,8 @@ class SupportTickets
             ])
             ->where('id', $ticketId)
             ->whereIn('projectId', $projectIds)
-            ->where('userId', $userId)
             ->whereNotIn('type', ['milestone', 'subtask'])
+            ->when($ownOnly, fn ($query) => $query->where('userId', $userId))
             ->first();
 
         return $ticket ? new TicketModel((array) $ticket) : false;
