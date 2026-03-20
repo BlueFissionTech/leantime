@@ -5,32 +5,34 @@
 @include('supportcenter::partials.assetStyles')
 
 <div class="maincontent">
-    <div class="maincontentinner">
+    <div class="maincontentinner supportcenter-shell">
         @if(count($supportProjects) === 0)
             <div class="alert alert-info">
                 No support projects are currently available for your account.
             </div>
         @else
-            <div class="supportcenter-toolbar">
-                <form method="get" action="{{ BASE_URL }}/support-center" class="form-inline">
-                    <label for="projectId" style="margin-right:10px;"><strong>Support Project</strong></label>
-                    <select id="projectId" name="projectId" onchange="this.form.submit()" class="form-control">
-                        @foreach($supportProjects as $projectOption)
-                            <option value="{{ $projectOption['id'] }}" @selected(($selectedSupportProject['id'] ?? null) === $projectOption['id'])>
-                                {{ $projectOption['name'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                </form>
+            <div class="supportcenter-panel">
+                <div class="supportcenter-toolbar">
+                    <form method="get" action="{{ BASE_URL }}/support-center" class="form-inline">
+                        <label for="projectId" style="margin-right:10px;"><strong>Support Project</strong></label>
+                        <select id="projectId" name="projectId" onchange="this.form.submit()" class="form-control">
+                            @foreach($supportProjects as $projectOption)
+                                <option value="{{ $projectOption['id'] }}" @selected(($selectedSupportProject['id'] ?? null) === $projectOption['id'])>
+                                    {{ $projectOption['name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
 
-                <a class="btn btn-primary" href="{{ BASE_URL }}/support-center/new?projectId={{ $selectedSupportProject['id'] ?? '' }}">New Support Ticket</a>
+                    <a class="btn btn-primary" href="{{ BASE_URL }}/support-center/new?projectId={{ $selectedSupportProject['id'] ?? '' }}">New Support Ticket</a>
+                </div>
             </div>
 
             <div class="supportcenter-columns">
-                <section>
-                    <h3>Open</h3>
+                <section class="supportcenter-panel supportcenter-section">
+                    <h3 class="supportcenter-section-title">Open</h3>
                     @if(count($openTickets) === 0)
-                        <p class="text-muted">No open support tickets right now.</p>
+                        <p class="supportcenter-empty">No open support tickets right now.</p>
                     @else
                         <div class="supportcenter-list">
                             @foreach($openTickets as $ticket)
@@ -50,10 +52,10 @@
                     @endif
                 </section>
 
-                <section>
-                    <h3>Archived / Resolved</h3>
+                <section class="supportcenter-panel supportcenter-section">
+                    <h3 class="supportcenter-section-title">Archived / Resolved</h3>
                     @if(count($archivedTickets) === 0)
-                        <p class="text-muted">No archived support tickets yet.</p>
+                        <p class="supportcenter-empty">No archived support tickets yet.</p>
                     @else
                         <div class="supportcenter-list">
                             @foreach($archivedTickets as $ticket)
