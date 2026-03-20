@@ -3,7 +3,7 @@
 use Leantime\Core\Events\EventDispatcher;
 use Leantime\Domain\Supportportal\Middleware\SupportHostRedirect;
 
-EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.publicActions', function ($actions) {
+EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.*.publicActions', function ($actions) {
     $actions[] = 'support';
     $actions[] = 'support.login';
     $actions[] = 'support.register';
@@ -11,7 +11,7 @@ EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.publicA
     return array_values(array_unique($actions));
 });
 
-EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.loginRoute', function ($route, $params) {
+EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.*.loginRoute', function ($route, $params) {
     $request = $params['request'] ?? null;
     $path = $request?->path() ?? '';
 
