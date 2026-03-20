@@ -1,9 +1,84 @@
+.supportcenter-surface {
+    border: 1px solid #dbe3ec;
+    border-radius: 16px;
+    padding: 22px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
 .supportcenter-toolbar {
     display: flex;
     justify-content: space-between;
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
+}
+
+.supportcenter-overview {
+    display: grid;
+    gap: 16px;
+}
+
+.supportcenter-overview-copy {
+    max-width: 760px;
+}
+
+.supportcenter-lead {
+    margin: 0;
+    color: #667085;
+    line-height: 1.65;
+}
+
+.supportcenter-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.supportcenter-stat {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+    padding: 12px 14px;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.supportcenter-stat strong {
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+.supportcenter-stat span {
+    color: #667085;
+    font-size: 12px;
+}
+
+.supportcenter-grid-row {
+    margin-top: 0;
+}
+
+.supportcenter-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.supportcenter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #3456a3;
+    font-weight: 600;
 }
 
 .supportcenter-list {
@@ -45,11 +120,22 @@
 }
 
 .supportcenter-empty {
+    display: grid;
+    gap: 6px;
     margin: 0;
-    padding: 18px;
+    padding: 20px;
     border-radius: 12px;
-    background: #f8fafc;
+    background: linear-gradient(180deg, #fbfdff 0%, #f6f9fc 100%);
     color: #667085;
+    border: 1px dashed #d6deea;
+}
+
+.supportcenter-empty strong {
+    color: #1c2938;
+}
+
+.supportcenter-empty p {
+    margin: 0;
 }
 
 .supportcenter-richtext {
