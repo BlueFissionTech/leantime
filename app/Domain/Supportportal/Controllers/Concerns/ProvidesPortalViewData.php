@@ -7,7 +7,7 @@ trait ProvidesPortalViewData
     protected function assignPortal(array $portal): void
     {
         $supportBaseUrl = $this->getSupportBaseUrl();
-        $supportHomeUrl = $supportBaseUrl.'/support';
+        $supportHomeUrl = $supportBaseUrl;
 
         $this->tpl->assign('portal', $portal);
         $this->tpl->assign('sitename', $portal['brandName'].' Support');
@@ -18,11 +18,11 @@ trait ProvidesPortalViewData
         $this->tpl->assign('supportBaseUrl', $supportBaseUrl);
         $this->tpl->assign('supportAssetBaseUrl', $supportBaseUrl);
         $this->tpl->assign('supportHomeUrl', $supportHomeUrl);
-        $this->tpl->assign('supportLoginUrl', $supportHomeUrl.'/login');
-        $this->tpl->assign('supportRegisterUrl', $supportHomeUrl.'/register');
-        $this->tpl->assign('supportLogoutUrl', $supportHomeUrl.'/logout');
-        $this->tpl->assign('supportTicketsUrl', $supportHomeUrl.'/tickets');
-        $this->tpl->assign('supportNewTicketUrl', $supportHomeUrl.'/tickets/new');
+        $this->tpl->assign('supportLoginUrl', $supportBaseUrl.'/login');
+        $this->tpl->assign('supportRegisterUrl', $supportBaseUrl.'/register');
+        $this->tpl->assign('supportLogoutUrl', $supportBaseUrl.'/logout');
+        $this->tpl->assign('supportTicketsUrl', $supportBaseUrl.'/tickets');
+        $this->tpl->assign('supportNewTicketUrl', $supportBaseUrl.'/tickets/new');
     }
 
     protected function supportUrl(string $path = ''): string

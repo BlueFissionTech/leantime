@@ -83,18 +83,18 @@ class Tickets extends Controller
             if (is_array($ticketId)) {
                 $this->tpl->setNotification($ticketId['msg'] ?? 'Could not create support ticket.', $ticketId['type'] ?? 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/new'));
             }
 
             if ($ticketId === false) {
                 $this->tpl->setNotification('Could not create support ticket.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/new'));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/new'));
             }
 
             $this->tpl->setNotification('Support ticket created.', 'success');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+            return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
         }
 
         $this->assignPortal($portal);
@@ -123,7 +123,7 @@ class Tickets extends Controller
             if ($text === '') {
                 $this->tpl->setNotification('Comment text is required.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
             }
 
             $commentAdded = $this->commentService->addComment([
@@ -134,12 +134,12 @@ class Tickets extends Controller
             if (! $commentAdded) {
                 $this->tpl->setNotification('Could not add comment.', 'error');
 
-                return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+                return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
             }
 
             $this->tpl->setNotification('Comment added.', 'success');
 
-            return Frontcontroller::redirect($this->supportUrl('/support/tickets/'.$ticketId));
+            return Frontcontroller::redirect($this->supportUrl('/tickets/'.$ticketId));
         }
 
         $statusLabels = $this->ticketService->getStatusLabels((int) $portal['projectId']);
@@ -161,7 +161,7 @@ class Tickets extends Controller
         }
 
         if (! session()->exists('userdata.id')) {
-            return Frontcontroller::redirect($this->supportUrl('/support/login'));
+            return Frontcontroller::redirect($this->supportUrl('/login'));
         }
 
         if (! $this->portalAccess->ensurePortalSession($portal)) {
