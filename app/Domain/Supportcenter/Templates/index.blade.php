@@ -1,3 +1,6 @@
+@extends($layout)
+
+@section('content')
 <x-global::pageheader :icon="'fa fa-life-ring'">
     <h5>Customer Support</h5>
     <h1 class="articleHeadline">Support Center</h1>
@@ -116,3 +119,4 @@
         </div>
     @endif
 </div>
+@endsection
