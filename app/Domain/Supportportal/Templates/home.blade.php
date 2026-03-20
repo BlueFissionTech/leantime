@@ -7,8 +7,8 @@
         <h1>Software support without the extra project-management surface.</h1>
         <p>Open an issue, track its status, and keep the comment thread in one place.</p>
         <div class="support-cta-row">
-            <a class="support-button primary" href="{{ BASE_URL }}/support/register">Create Support Account</a>
-            <a class="support-button secondary" href="{{ BASE_URL }}/support/login">Sign In</a>
+            <a class="support-button primary" href="{{ $supportRegisterUrl }}">Create Support Account</a>
+            <a class="support-button secondary" href="{{ $supportLoginUrl }}">Sign In</a>
         </div>
     </div>
 

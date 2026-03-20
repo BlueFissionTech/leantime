@@ -5,7 +5,7 @@
     <div class="support-panel">
         <h1>Create your {{ $portal['brandName'] }} Support account</h1>
         <p>This account is only for {{ $portal['productName'] }} support tracking.</p>
-        <form method="post" action="{{ BASE_URL }}/support/register" class="support-form">
+        <form method="post" action="{{ $supportRegisterUrl }}" class="support-form">
             <label>
                 <span>First name</span>
                 <input type="text" name="firstName" required />
@@ -26,7 +26,7 @@
         </form>
         <p class="support-footnote">
             Already registered?
-            <a href="{{ BASE_URL }}/support/login">Sign in here</a>
+            <a href="{{ $supportLoginUrl }}">Sign in here</a>
         </p>
     </div>
 </div>

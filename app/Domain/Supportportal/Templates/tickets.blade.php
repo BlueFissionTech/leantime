@@ -7,7 +7,7 @@
             <span class="support-eyebrow">{{ $portal['productName'] }}</span>
             <h1>My Support Tickets</h1>
         </div>
-        <a class="support-button primary" href="{{ BASE_URL }}/support/tickets/new">New Ticket</a>
+        <a class="support-button primary" href="{{ $supportNewTicketUrl }}">New Ticket</a>
     </div>
 
     <section class="support-ticket-section">
@@ -17,7 +17,7 @@
         @else
             <div class="support-ticket-list">
                 @foreach($openTickets as $ticket)
-                    <a class="support-ticket-card" href="{{ BASE_URL }}/support/tickets/{{ $ticket->id }}">
+                    <a class="support-ticket-card" href="{{ $supportTicketsUrl }}/{{ $ticket->id }}">
                         <div class="support-ticket-card-top">
                             <strong>#{{ $ticket->id }} {{ $ticket->headline }}</strong>
                             <span class="support-status-pill">{{ $statusLabels[$ticket->status]['name'] ?? $ticket->status }}</span>
@@ -40,7 +40,7 @@
         @else
             <div class="support-ticket-list">
                 @foreach($archivedTickets as $ticket)
-                    <a class="support-ticket-card archived" href="{{ BASE_URL }}/support/tickets/{{ $ticket->id }}">
+                    <a class="support-ticket-card archived" href="{{ $supportTicketsUrl }}/{{ $ticket->id }}">
                         <div class="support-ticket-card-top">
                             <strong>#{{ $ticket->id }} {{ $ticket->headline }}</strong>
                             <span class="support-status-pill">{{ $statusLabels[$ticket->status]['name'] ?? $ticket->status }}</span>
