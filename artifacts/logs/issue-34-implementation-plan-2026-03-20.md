@@ -17,3 +17,9 @@
 - Move ticket linkage metadata to a dedicated table or relationship model
 - Add issue-status sync back from GitHub
 - Add richer repo mapping by support project/product
+
+
+## Current temporary repo mapping
+- Current implementation uses one global environment target: `LEAN_SUPPORT_GITHUB_REPO`
+- This is acceptable for the first slice, but it is not the desired steady state
+- Follow-up: move GitHub repo selection to support-project or product-family configuration so each support project can elevate into its own private product repository
