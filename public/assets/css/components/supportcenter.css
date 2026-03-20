@@ -7,9 +7,8 @@
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    align-items: end;
+    align-items: center;
     flex-wrap: wrap;
-    margin-bottom: 18px;
 }
 
 .supportcenter-list {
@@ -32,6 +31,11 @@
     display: block;
 }
 
+.supportcenter-card:hover {
+    border-color: #aab7c6;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
 .supportcenter-card.archived {
     opacity: 0.78;
 }
@@ -49,6 +53,18 @@
     display: grid;
     gap: 20px;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.supportcenter-section-title {
+    margin: 0 0 14px;
+}
+
+.supportcenter-empty {
+    margin: 0;
+    padding: 18px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #667085;
 }
 
 .supportcenter-richtext {
