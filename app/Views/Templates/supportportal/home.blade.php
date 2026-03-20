@@ -4,7 +4,7 @@
 <div class="support-shell">
     <div class="support-hero">
         <span class="support-eyebrow">{{ $portal['productName'] }}</span>
-        <h1>Software support without the extra project-management surface.</h1>
+        <h1>{{ $portal['brandName'] }} support portal</h1>
         <p>Open an issue, track its status, and keep the comment thread in one place.</p>
         <div class="support-cta-row">
             <a class="support-button primary" href="{{ $supportRegisterUrl }}">Create Support Account</a>
