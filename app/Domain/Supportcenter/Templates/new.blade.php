@@ -2,6 +2,8 @@
     New Support Ticket
 </x-global::pageheader>
 
+@include('supportcenter.partials.styles')
+
 <div class="maincontent">
     <div class="maincontentinner">
         @if(count($supportProjects) === 0)
@@ -9,7 +11,7 @@
                 No support projects are currently available for your account.
             </div>
         @else
-            <form method="post" action="{{ BASE_URL }}/support-center/new" class="form-horizontal">
+            <form method="post" action="{{ BASE_URL }}/support-center/new" class="form-horizontal supportcenter-editor">
                 <div class="row">
                     <div class="col-md-8">
                         <div class="form-group">
@@ -28,7 +30,7 @@
                         <div class="form-group">
                             <label class="control-label col-md-2" for="headline">Subject</label>
                             <div class="col-md-10">
-                                <input id="headline" type="text" name="headline" class="form-control" required />
+                                <input id="headline" type="text" name="headline" value="{{ old('headline') }}" class="form-control" required />
                             </div>
                         </div>
 
@@ -46,7 +48,7 @@
                         <div class="form-group">
                             <label class="control-label col-md-2" for="description">Description</label>
                             <div class="col-md-10">
-                                <textarea id="description" name="description" rows="10" class="form-control" required></textarea>
+                                <textarea id="description" name="description" rows="10" class="form-control tiptapComplex" required>{{ old('description') }}</textarea>
                             </div>
                         </div>
 
@@ -62,3 +64,13 @@
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.leantime && window.leantime.tiptapController) {
+            window.leantime.tiptapController.initComplexEditor();
+        }
+    });
+</script>
+@endpush
