@@ -143,6 +143,7 @@ getFilesRecursive('app/Domain', '.js').forEach(file => {
     .less('./public/assets/less/app.less', `public/dist/css/app.${version}.min.css`, {
         sourceMap: true,
     })
+    .copy('./public/assets/css/components/supportcenter.css', `public/dist/css/supportcenter.${version}.min.css`)
     .copy('./public/assets/css/components/tiptap-editor.css', `public/dist/css/tiptap-editor.${version}.min.css`)
     .tailwind()
     .copy('./public/assets/images', 'public/dist/images')

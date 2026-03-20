@@ -2,6 +2,8 @@
     Support Center
 </x-global::pageheader>
 
+@include('supportcenter.partials.assetStyles')
+
 <div class="maincontent">
     <div class="maincontentinner">
         @if(count($supportProjects) === 0)
