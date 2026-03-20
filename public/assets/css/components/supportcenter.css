@@ -1,9 +1,3 @@
-.supportcenter-shell {
-    display: grid;
-    gap: 20px;
-    font-family: var(--primary-font-family);
-}
-
 .supportcenter-toolbar {
     display: flex;
     justify-content: space-between;
@@ -17,24 +11,20 @@
     gap: 14px;
 }
 
-.supportcenter-card,
-.supportcenter-panel {
-    border: 1px solid #dbe3ec;
-    border-radius: 16px;
-    padding: 22px;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-}
-
 .supportcenter-card {
+    border: 1px solid #dbe3ec;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
     color: inherit;
     text-decoration: none;
     display: block;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .supportcenter-card:hover {
     border-color: #aab7c6;
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .supportcenter-card.archived {
@@ -50,15 +40,8 @@
     color: #667085;
 }
 
-.supportcenter-columns {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-}
-
-.supportcenter-section-title {
-    margin: 0 0 14px;
-    font-size: 18px;
+.supportcenter-section-wrap {
+    min-height: 100%;
 }
 
 .supportcenter-empty {
@@ -98,6 +81,10 @@
 .supportcenter-comment:first-child {
     border-top: 0;
     padding-top: 0;
+}
+
+.supportcenter-comment-meta {
+    margin-bottom: 8px;
 }
 
 .supportcenter-editor .tiptap-wrapper,
