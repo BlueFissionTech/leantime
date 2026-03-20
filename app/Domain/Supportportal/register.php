@@ -15,10 +15,24 @@ EventDispatcher::add_filter_listener('leantime.core.middleware.authcheck.loginRo
     $request = $params['request'] ?? null;
     $path = $request?->path() ?? '';
 
-    if ($path === 'support' || str_starts_with($path, 'support/')) {
-        $basePath = rtrim($request?->getBasePath() ?? '', '/');
+    if ($request === null) {
+        return $route;
+    }
 
-        return $request->getSchemeAndHttpHost().$basePath.'/support/login';
+    $portal = app(PortalResolver::class)->resolveCurrentHost($request->getHost());
+    if ($portal === false) {
+        return $route;
+    }
+
+    $basePath = rtrim($request->getBasePath(), '/');
+    $supportBase = $request->getSchemeAndHttpHost().$basePath.'/support';
+
+    if ($path === '/' || $path === '') {
+        return $supportBase;
+    }
+
+    if ($path === 'support' || str_starts_with($path, 'support/')) {
+        return $supportBase.'/login';
     }
 
     return $route;
