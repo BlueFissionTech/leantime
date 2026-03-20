@@ -8,32 +8,34 @@
 <div class="maincontent">
     {!! $tpl->displayNotification() !!}
 
-    <div class="maincontentinner supportcenter-shell">
-        @if(count($supportProjects) === 0)
+    @if(count($supportProjects) === 0)
+        <div class="maincontentinner">
             <div class="alert alert-info">
                 No support projects are currently available for your account.
             </div>
-        @else
-            <div class="supportcenter-panel">
-                <div class="supportcenter-toolbar">
-                    <form method="get" action="{{ BASE_URL }}/support-center" class="form-inline">
-                        <label for="projectId" style="margin-right:10px;"><strong>Support Project</strong></label>
-                        <select id="projectId" name="projectId" onchange="this.form.submit()" class="form-control">
-                            @foreach($supportProjects as $projectOption)
-                                <option value="{{ $projectOption['id'] }}" @selected(($selectedSupportProject['id'] ?? null) === $projectOption['id'])>
-                                    {{ $projectOption['name'] }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </form>
+        </div>
+    @else
+        <div class="maincontentinner">
+            <div class="supportcenter-toolbar">
+                <form method="get" action="{{ BASE_URL }}/support-center" class="form-inline">
+                    <label for="projectId" style="margin-right:10px;"><strong>Support Project</strong></label>
+                    <select id="projectId" name="projectId" onchange="this.form.submit()" class="form-control">
+                        @foreach($supportProjects as $projectOption)
+                            <option value="{{ $projectOption['id'] }}" @selected(($selectedSupportProject['id'] ?? null) === $projectOption['id'])>
+                                {{ $projectOption['name'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
 
-                    <a class="btn btn-primary" href="{{ BASE_URL }}/support-center/new?projectId={{ $selectedSupportProject['id'] ?? '' }}">New Support Ticket</a>
-                </div>
+                <a class="btn btn-primary" href="{{ BASE_URL }}/support-center/new?projectId={{ $selectedSupportProject['id'] ?? '' }}">New Support Ticket</a>
             </div>
+        </div>
 
-            <div class="supportcenter-columns">
-                <section class="supportcenter-panel supportcenter-section">
-                    <h3 class="supportcenter-section-title">Open</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="maincontentinner supportcenter-section-wrap">
+                    <h5 class="subtitle">Open</h5>
                     @if(count($openTickets) === 0)
                         <p class="supportcenter-empty">No open support tickets right now.</p>
                     @else
@@ -53,10 +55,11 @@
                             @endforeach
                         </div>
                     @endif
-                </section>
-
-                <section class="supportcenter-panel supportcenter-section">
-                    <h3 class="supportcenter-section-title">Archived / Resolved</h3>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="maincontentinner supportcenter-section-wrap">
+                    <h5 class="subtitle">Archived / Resolved</h5>
                     @if(count($archivedTickets) === 0)
                         <p class="supportcenter-empty">No archived support tickets yet.</p>
                     @else
@@ -72,8 +75,8 @@
                             @endforeach
                         </div>
                     @endif
-                </section>
+                </div>
             </div>
-        @endif
-    </div>
+        </div>
+    @endif
 </div>
