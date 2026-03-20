@@ -1,4 +1,5 @@
 @once
+@push('styles')
 <style>
     .supportcenter-shell { display:grid; gap:20px; }
     .supportcenter-toolbar { display:flex; justify-content:space-between; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:18px; }
@@ -20,4 +21,5 @@
     .supportcenter-editor .tiptap-toolbar { margin-bottom:8px; }
     .supportcenter-field-label { display:block; font-weight:600; margin-bottom:6px; }
 </style>
+@endpush
 @endonce
