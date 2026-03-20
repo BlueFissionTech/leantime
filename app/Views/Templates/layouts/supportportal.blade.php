@@ -17,6 +17,7 @@
 
     <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/main.{{ $version ?? '' }}.min.css"/>
     <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/app.{{ $version ?? '' }}.min.css"/>
+    <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/tiptap-editor.{{ $version ?? '' }}.min.css"/>
 
     <script src="{{ $supportAssetBaseUrl }}/api/i18n?v={{ $version ?? '' }}"></script>
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-htmx.{{ $version ?? '' }}.min.js"></script>
@@ -24,6 +25,8 @@
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-frameworks.{{ $version ?? '' }}.min.js"></script>
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-framework-plugins.{{ $version ?? '' }}.min.js"></script>
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-global-component.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-tiptap-toolbar.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-tiptap-editor.{{ $version ?? '' }}.min.js"></script>
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-app.{{ $version ?? '' }}.min.js"></script>
 
     <style>
@@ -210,6 +213,31 @@
             color: #1c2938;
             white-space: normal;
         }
+        .support-richtext img,
+        .support-richtext video,
+        .support-richtext iframe {
+            max-width: 100%;
+            height: auto;
+            border-radius: 14px;
+        }
+        .support-richtext p:first-child {
+            margin-top: 0;
+        }
+        .support-richtext p:last-child {
+            margin-bottom: 0;
+        }
+        .support-editor .tiptap-wrapper,
+        .support-editor .tiptap-editor,
+        .support-editor .tiptap-toolbar {
+            width: 100%;
+        }
+        .support-editor .tiptap-editor {
+            border-radius: 14px;
+            background: #fff;
+        }
+        .support-editor .tiptap-toolbar {
+            margin-bottom: 8px;
+        }
         .support-comment-list {
             display: grid;
             gap: 14px;
@@ -253,6 +281,12 @@
         @endif
     </header>
 
+    <script>
+        window.leantime = window.leantime || {};
+        window.leantime.currentProject = '{{ (int) ($portal['projectId'] ?? 0) }}';
+        window.leantime.projectId = '{{ (int) ($portal['projectId'] ?? 0) }}';
+    </script>
+
     <main class="support-layout">
         {!! $tpl->displayNotification() !!}
 
@@ -263,6 +297,7 @@
         @endisset
     </main>
 
+    @stack('scripts')
     <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-footer.{{ $version ?? '' }}.min.js"></script>
 </body>
 </html>
