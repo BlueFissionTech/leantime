@@ -55,12 +55,16 @@ class AuthCheck
      */
     public function handle(IncomingRequest $request, Closure $next): Response
     {
+        if ($supportRootRedirect = $this->getSupportPortalRootRedirect($request)) {
+            return new RedirectResponse($supportRootRedirect);
+        }
 
-        if ($this->isPublicController($request->getCurrentRoute())) {
+        if ($this->isSupportPortalPublicRequest($request) || $this->isPublicController($request->getCurrentRoute())) {
             return $next($request);
         }
 
-        $loginRedirect = self::dispatch_filter('loginRoute', 'auth.login', ['request' => $request]);
+        $loginRedirect = $this->getSupportPortalLoginRedirect($request)
+            ?? self::dispatch_filter('loginRoute', 'auth.login', ['request' => $request]);
 
         if ($request instanceof ApiRequest) {
             self::dispatchEvent('before_api_request', ['application' => app()], 'leantime.core.middleware.apiAuth.handle');
@@ -203,5 +207,68 @@ class AuthCheck
 
         return $routeToCheck !== null && in_array($routeToCheck, $this->publicActions, true);
 
+    }
+
+    private function resolveSupportPortal(IncomingRequest $request): array|false
+    {
+        $resolverClass = \Leantime\Domain\Supportportal\Services\PortalResolver::class;
+
+        if (! class_exists($resolverClass)) {
+            return false;
+        }
+
+        try {
+            return app($resolverClass)->resolveCurrentHost($request->getHost());
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function getSupportPortalBaseUrl(IncomingRequest $request): string
+    {
+        $basePath = rtrim($request->getBasePath(), '/');
+
+        return $request->getSchemeAndHttpHost().$basePath.'/support';
+    }
+
+    private function getSupportPortalRootRedirect(IncomingRequest $request): ?string
+    {
+        $portal = $this->resolveSupportPortal($request);
+
+        if ($portal === false) {
+            return null;
+        }
+
+        $path = $request->path();
+
+        return ($path === '/' || $path === '') ? $this->getSupportPortalBaseUrl($request) : null;
+    }
+
+    private function isSupportPortalPublicRequest(IncomingRequest $request): bool
+    {
+        $portal = $this->resolveSupportPortal($request);
+
+        if ($portal === false) {
+            return false;
+        }
+
+        return in_array($request->path(), ['support', 'support/login', 'support/register'], true);
+    }
+
+    private function getSupportPortalLoginRedirect(IncomingRequest $request): ?string
+    {
+        $portal = $this->resolveSupportPortal($request);
+
+        if ($portal === false) {
+            return null;
+        }
+
+        $path = $request->path();
+
+        if ($path === 'support' || str_starts_with($path, 'support/')) {
+            return $this->getSupportPortalBaseUrl($request).'/login';
+        }
+
+        return null;
     }
 }

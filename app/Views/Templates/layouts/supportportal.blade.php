@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html dir="{{ __('language.direction') }}" lang="{{ __('language.code') }}">
 <head>
-    <title>@dispatchFilter('page_title', $sitename)</title>
+    <title>{{ $sitename }}</title>
     <meta name="requestId" content="{{ \Illuminate\Support\Str::random(4) }}">
     <meta name="description" content="{{ $sitename }}">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -9,48 +9,29 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-touch-fullscreen" content="yes">
     <meta name="theme-color" content="{{ $primaryColor }}">
-    <meta name="color-scheme" content="{{ $themeColorMode }}">
-    <meta name="theme" content="{{ $theme }}">
     <meta name="identifier-URL" content="{{ $supportBaseUrl }}">
-    <meta name="leantime-version" content="{{ $version }}">
-
-    @dispatchEvent('afterMetaTags')
+    <meta name="leantime-version" content="{{ $version ?? '' }}">
 
     <link rel="shortcut icon" href="{{ $supportAssetBaseUrl }}/dist/images/favicon.png"/>
     <link rel="apple-touch-icon" href="{{ $supportAssetBaseUrl }}/dist/images/apple-touch-icon.png">
 
-    <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/main.{{ $version }}.min.css"/>
-    <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/app.{{ $version }}.min.css"/>
+    <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/main.{{ $version ?? '' }}.min.css"/>
+    <link rel="stylesheet" href="{{ $supportAssetBaseUrl }}/dist/css/app.{{ $version ?? '' }}.min.css"/>
 
-    @dispatchEvent('afterLinkTags')
-
-    <script src="{{ $supportAssetBaseUrl }}/api/i18n?v={{ $version }}"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-htmx.{{ $version }}.min.js"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-htmx-extensions.{{ $version }}.min.js"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-frameworks.{{ $version }}.min.js"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-framework-plugins.{{ $version }}.min.js"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-global-component.{{ $version }}.min.js"></script>
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-app.{{ $version }}.min.js"></script>
-
-    @dispatchEvent('afterScriptsAndStyles')
-
-    <style id="colorSchemeSetter">
-        @foreach ($accents as $accent)
-            @if($accent !== false)
-                :root {
-                    --accent{{ $loop->iteration }}: {{{ $accent }}};
-                }
-            @endif
-        @endforeach
-    </style>
-
-    <style id="fontStyleSetter">
-        :root {
-            --primary-font-family: '{{{ $themeFont }}}', 'Helvetica Neue', Helvetica, sans-serif;
-        }
-    </style>
+    <script src="{{ $supportAssetBaseUrl }}/api/i18n?v={{ $version ?? '' }}"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-htmx.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-htmx-extensions.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-frameworks.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-framework-plugins.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-global-component.{{ $version ?? '' }}.min.js"></script>
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-app.{{ $version ?? '' }}.min.js"></script>
 
     <style>
+        :root {
+            --accent1: {{ $primaryColor }};
+            --accent2: {{ $secondaryColor }};
+            --primary-font-family: 'Helvetica Neue', Helvetica, sans-serif;
+        }
         body.support-portal-body {
             min-height: 100vh;
             margin: 0;
@@ -282,7 +263,6 @@
         @endisset
     </main>
 
-    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-footer.{{ $version }}.min.js"></script>
-    @dispatchEvent('beforeBodyClose')
+    <script src="{{ $supportAssetBaseUrl }}/dist/js/compiled-footer.{{ $version ?? '' }}.min.js"></script>
 </body>
 </html>
