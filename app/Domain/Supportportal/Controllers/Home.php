@@ -41,6 +41,6 @@ class Home extends Controller
 
         $this->assignPortal($portal);
 
-        return $this->tpl->display('supportportal.home', 'supportportal');
+        return $this->tpl->display('global::supportportal.home', 'supportportal');
     }
 }

@@ -58,7 +58,7 @@ class Tickets extends Controller
         $this->tpl->assign('archivedTickets', $archivedTickets);
         $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
 
-        return $this->tpl->display('supportportal.tickets', 'supportportal');
+        return $this->tpl->display('global::supportportal.tickets', 'supportportal');
     }
 
     public function new(array $params): Response
@@ -100,7 +100,7 @@ class Tickets extends Controller
         $this->assignPortal($portal);
         $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
 
-        return $this->tpl->display('supportportal.newTicket', 'supportportal');
+        return $this->tpl->display('global::supportportal.newTicket', 'supportportal');
     }
 
     public function show(array $params): Response
@@ -150,7 +150,7 @@ class Tickets extends Controller
         $this->tpl->assign('comments', $comments);
         $this->tpl->assign('statusLabels', $statusLabels);
 
-        return $this->tpl->display('supportportal.showTicket', 'supportportal');
+        return $this->tpl->display('global::supportportal.showTicket', 'supportportal');
     }
 
     private function resolvePortalOrRedirect(): array|Response
