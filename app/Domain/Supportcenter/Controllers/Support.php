@@ -178,6 +178,7 @@ class Support extends Controller
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('comments', $comments);
         $this->tpl->assign('githubIssue', $this->githubElevation->getTicketGithubIssue($ticketId));
+        $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($ticketId));
         $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
 
         return $this->tpl->display('supportcenter.show');
