@@ -33,6 +33,7 @@ class Ticketdependencies
                 'dependency.headline',
                 'dependency.status',
                 'dependency.projectId',
+                'dependency.editTo',
                 'dependency.dateToFinish',
                 'dependency.type',
             ])
@@ -42,6 +43,35 @@ class Ticketdependencies
             ->where('relationship.relationship', EntityRelationshipEnum::Dependency->value)
             ->orderBy('dependency.dateToFinish')
             ->orderBy('dependency.id')
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->toArray();
+    }
+
+    public function getValidDependenciesWithSchedule(int $ticketId, int $projectId, array $candidateIds): array
+    {
+        $candidateIds = array_values(array_unique(array_filter(
+            array_map('intval', $candidateIds),
+            fn ($candidateId) => $candidateId > 0 && $candidateId !== $ticketId
+        )));
+
+        if (empty($candidateIds)) {
+            return [];
+        }
+
+        return $this->connection->table('zp_tickets')
+            ->select([
+                'id',
+                'headline',
+                'projectId',
+                'editTo',
+                'dateToFinish',
+            ])
+            ->whereIn('id', $candidateIds)
+            ->where('projectId', $projectId)
+            ->where('type', '<>', 'milestone')
+            ->orderBy('dateToFinish')
+            ->orderBy('id')
             ->get()
             ->map(fn ($row) => (array) $row)
             ->toArray();

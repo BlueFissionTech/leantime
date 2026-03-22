@@ -2083,6 +2083,7 @@ class Tickets
             'milestoneid' => $values['milestoneid'] ?? '',
             'collaborators' => $values['collaborators'] ?? [],
             'dependencyTicketIds' => $values['dependencyTicketIds'] ?? [],
+            'autoRescheduleDependencies' => (int) ($values['autoRescheduleDependencies'] ?? 0),
         ];
 
         if ($values['projectId'] === null || $values['projectId'] === '' || $values['projectId'] === false) {
@@ -2094,8 +2095,25 @@ class Tickets
         }
 
         $values = $this->prepareTicketDates($values);
-        $statusLabels = $this->getStatusLabels($values['projectId']);
         $ticketdependencyService = $this->getTicketdependencyService();
+        $latestDependencyFinish = $ticketdependencyService->getLatestDependencyFinish(
+            (int) $values['id'],
+            (int) $values['projectId'],
+            $values['dependencyTicketIds']
+        );
+
+        if ($latestDependencyFinish !== null) {
+            if ($values['autoRescheduleDependencies'] === 1) {
+                $values = $ticketdependencyService->alignScheduleToDependencies($values, $latestDependencyFinish);
+            } elseif ($ticketdependencyService->violatesPlannedStart($values['editFrom'] ?: null, $latestDependencyFinish)) {
+                return [
+                    'msg' => 'Planned start must be on or after the latest predecessor finish. Move the start date or enable auto-reschedule.',
+                    'type' => 'error',
+                ];
+            }
+        }
+
+        $statusLabels = $this->getStatusLabels($values['projectId']);
         $values['status'] = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
 
         // Update Ticket
