@@ -37,9 +37,9 @@
     <div class="maincontentinner">
         <div class="supportcenter-surface">
             <h5 class="subtitle">Engineering Elevation</h5>
-            @if($githubIssue !== false)
-                <p><strong>Status:</strong> Elevated to GitHub</p>
-                <p><strong>Issue:</strong> <a href="{{ $githubIssue['url'] }}" target="_blank" rel="noopener noreferrer">#{{ $githubIssue['number'] }}</a></p>
+            @if($githubStatus !== false)
+                <p><strong>Engineering Status:</strong> {{ $githubStatus['status'] }}</p>
+                <p class="text-muted">Only the sanitized engineering status is shown here.</p>
             @elseif($canElevateGitHub)
                 <p class="text-muted">Use this when the issue has been validated as an engineering/code issue. Keep the GitHub text sanitized for public visibility.</p>
                 <form method="post" action="{{ BASE_URL }}/support-center/{{ $ticket->id }}/elevate-github?projectId={{ $ticket->projectId }}">

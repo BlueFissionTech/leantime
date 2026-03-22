@@ -24,6 +24,23 @@ class GithubElevation
         return is_array($decoded) ? $decoded : false;
     }
 
+    public function getTicketGithubStatus(int $ticketId): array|false
+    {
+        $issue = $this->getTicketGithubIssue($ticketId);
+
+        if ($issue === false) {
+            return false;
+        }
+
+        $state = $this->resolveIssueState($ticketId, $issue);
+
+        return [
+            'status' => $state === 'closed' ? 'Done' : 'In Progress',
+            'isDone' => $state === 'closed',
+            'isInProgress' => $state !== 'closed',
+        ];
+    }
+
     public function createGithubIssue(int $ticketId, object $ticket, array $payload): array
     {
         $existing = $this->getTicketGithubIssue($ticketId);
@@ -82,7 +99,7 @@ class GithubElevation
             'number' => (int) ($issue['number'] ?? 0),
             'url' => (string) ($issue['html_url'] ?? ''),
             'apiUrl' => (string) ($issue['url'] ?? ''),
-            'state' => 'elevated',
+            'state' => (string) ($issue['state'] ?? 'open'),
             'createdAt' => date('Y-m-d H:i:s'),
             'createdBy' => (int) session('userdata.id'),
         ];
@@ -123,6 +140,48 @@ class GithubElevation
     private function getSettingKey(int $ticketId): string
     {
         return 'supportcenter.ticket.'.$ticketId.'.githubIssue';
+    }
+
+    private function resolveIssueState(int $ticketId, array $issue): string
+    {
+        $repo = $this->normalizeRepository(trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_REPO')));
+        $token = trim((string) $this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_TOKEN'));
+        $baseUrl = rtrim((string) ($this->getEnvironmentValue('LEAN_SUPPORT_GITHUB_BASE_URL') ?: 'https://api.github.com'), '/');
+        $apiUrl = trim((string) ($issue['apiUrl'] ?? ''));
+
+        if ($repo === '' || $token === '') {
+            return strtolower((string) ($issue['state'] ?? 'open'));
+        }
+
+        if ($apiUrl === '' && ! empty($issue['number'])) {
+            $apiUrl = $baseUrl.'/repos/'.$repo.'/issues/'.(int) $issue['number'];
+        }
+
+        if ($apiUrl === '') {
+            return strtolower((string) ($issue['state'] ?? 'open'));
+        }
+
+        $response = Http::withoutVerifying()
+            ->withToken($token)
+            ->withUserAgent('BlueFission-Leantime-Supportcenter')
+            ->withHeaders([
+                'Accept' => 'application/vnd.github+json',
+                'X-GitHub-Api-Version' => '2022-11-28',
+            ])
+            ->get($apiUrl);
+
+        if (! $response->successful()) {
+            return strtolower((string) ($issue['state'] ?? 'open'));
+        }
+
+        $state = strtolower((string) ($response->json('state') ?? 'open'));
+
+        if ($state !== strtolower((string) ($issue['state'] ?? ''))) {
+            $issue['state'] = $state;
+            $this->settingRepository->saveSetting($this->getSettingKey($ticketId), json_encode($issue));
+        }
+
+        return $state;
     }
 
     private function normalizeRepository(string $repository): string

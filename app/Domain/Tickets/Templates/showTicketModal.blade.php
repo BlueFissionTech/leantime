@@ -88,6 +88,9 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
             <?php if ($login::userIsAtLeast($roles::$editor)) {  ?>
                 <li><a href="#timesheet"><span class="fa fa-clock"></span> <?php echo $tpl->__('tabs.time_tracking') ?></a></li>
             <?php } ?>
+            <?php if ($tpl->get('githubStatus') !== false || $tpl->get('canElevateGitHub')) { ?>
+                <li><a href="#githubstatus"><span class="fa-brands fa-github"></span> GitHub</a></li>
+            <?php } ?>
             <?php $tpl->dispatchTplEvent('ticketTabs', ['ticket' => $ticket]); ?>
         </ul>
 
@@ -104,6 +107,45 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
         <?php if ($login::userIsAtLeast($roles::$editor)) {  ?>
             <div id="timesheet">
                 <?php $tpl->displaySubmodule('tickets-timesheet') ?>
+            </div>
+        <?php } ?>
+
+        <?php if ($tpl->get('githubStatus') !== false || $tpl->get('canElevateGitHub')) { ?>
+            <div id="githubstatus">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4 class="widgettitle title-light"><i class="fa-brands fa-github"></i> Engineering Status</h4>
+
+                        <?php if ($tpl->get('githubStatus') !== false) { ?>
+                            <p><strong>Status:</strong> <?php echo $tpl->escape($tpl->get('githubStatus')['status']); ?></p>
+                            <p class="small muted">Only the sanitized engineering status is shown here.</p>
+                        <?php } elseif ($tpl->get('canElevateGitHub')) { ?>
+                            <p class="small muted">Use this when the ticket has been validated as an engineering/code issue. The created GitHub issue text should stay sanitized for public visibility.</p>
+                            <form action="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>" method="post">
+                                <input type="hidden" name="elevateGithub" value="1" />
+                                <div class="form-group">
+                                    <label class="control-label" for="githubTitle">GitHub Title</label>
+                                    <input id="githubTitle" type="text" name="githubTitle" class="form-control" required />
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="githubSummary">Technical Summary</label>
+                                    <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="githubReproduction">Reproduction Notes</label>
+                                    <textarea id="githubReproduction" name="githubReproduction" rows="4" class="form-control"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="githubImpact">Impact</label>
+                                    <textarea id="githubImpact" name="githubImpact" rows="3" class="form-control"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Elevate to GitHub</button>
+                            </form>
+                        <?php } else { ?>
+                            <p class="small muted">Only manager-level users and above can elevate tickets to GitHub.</p>
+                        <?php } ?>
+                    </div>
+                </div>
             </div>
         <?php } ?>
 
