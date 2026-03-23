@@ -25,6 +25,7 @@ use Leantime\Domain\Sprints\Services\Sprints as SprintService;
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
+use Leantime\Domain\Tickets\Support\ProjectSheetExportFormatter;
 use Leantime\Domain\Timesheets\Repositories\Timesheets as TimesheetRepository;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 
@@ -63,6 +64,7 @@ class Tickets
         private ProjectService $projectService,
         private TimesheetService $timesheetService,
         private SprintService $sprintService,
+        private ProjectSheetExportFormatter $projectSheetExportFormatter,
         private TicketHistory $ticketHistoryRepo,
         private Goalcanvas $goalcanvasService,
         private DateTimeHelper $dateTimeHelper
@@ -421,6 +423,35 @@ class Tickets
         }
 
         return $tickets;
+    }
+
+    public function getProjectSheetExport(array $params): array
+    {
+        $searchCriteria = $this->prepareTicketSearchArray($params);
+        $searchCriteria['currentProject'] = (int) ($params['currentProject'] ?? $params['projectId'] ?? 0);
+
+        if (($searchCriteria['currentProject'] ?? 0) <= 0) {
+            return [];
+        }
+
+        $tickets = $this->getAll($searchCriteria, 10000);
+
+        if (! is_array($tickets)) {
+            return [];
+        }
+
+        $updatedSince = null;
+        $updatedSinceValue = trim((string) ($params['updated_since'] ?? $params['updatedSince'] ?? ''));
+
+        if ($updatedSinceValue !== '') {
+            try {
+                $updatedSince = CarbonImmutable::parse($updatedSinceValue);
+            } catch (\Throwable $e) {
+                $updatedSince = null;
+            }
+        }
+
+        return $this->projectSheetExportFormatter->format($tickets, $updatedSince);
     }
 
     private function decorateWithFriendlyStatusLabels(array $tickets): array
