@@ -345,6 +345,7 @@ class Tickets
                 'zp_tickets.priority',
                 'zp_tickets.status',
                 'zp_tickets.tags',
+                'zp_tickets.modified',
                 'zp_tickets.editorId',
                 'zp_tickets.dependingTicketId',
                 'zp_tickets.milestoneid',

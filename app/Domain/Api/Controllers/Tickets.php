@@ -40,6 +40,17 @@ class Tickets extends Controller
      */
     public function get(array $params): Response
     {
+        if (isset($params['projectSheetExport'])) {
+            $results = $this->ticketsApiService->getProjectSheetExport($params);
+
+            $this->apiService->jsonResponse(1, [
+                'rows' => $results,
+                'count' => count($results),
+                'projectId' => (int) ($params['currentProject'] ?? $params['projectId'] ?? 0),
+                'updatedSince' => $params['updated_since'] ?? $params['updatedSince'] ?? null,
+            ]);
+        }
+
         if (isset($params['search'])) {
             $searchCriteria = $this->ticketsApiService->prepareTicketSearchArray($params);
 
