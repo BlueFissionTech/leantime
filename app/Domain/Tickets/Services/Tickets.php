@@ -2123,6 +2123,11 @@ class Tickets
                 $values['dependencyTicketIds'],
                 (int) (session('userdata.id') ?? -1)
             );
+            $ticketdependencyService->setAutoRescheduleEnabled(
+                (int) $values['id'],
+                $values['autoRescheduleDependencies'] === 1,
+                (int) (session('userdata.id') ?? -1)
+            );
 
             $coercedStatus = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
             if ((string) $coercedStatus !== (string) $values['status']) {

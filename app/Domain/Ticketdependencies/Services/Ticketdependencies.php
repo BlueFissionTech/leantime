@@ -96,6 +96,16 @@ class Ticketdependencies
         return $this->dependencySchedule->alignSchedule($values, $latestFinish);
     }
 
+    public function getAutoRescheduleEnabled(int $ticketId): bool
+    {
+        return $this->ticketdependencyRepository->getAutoRescheduleEnabled($ticketId);
+    }
+
+    public function setAutoRescheduleEnabled(int $ticketId, bool $enabled, int $createdBy): bool
+    {
+        return $this->ticketdependencyRepository->setAutoRescheduleEnabled($ticketId, $enabled, $createdBy);
+    }
+
     public function coerceBlockedStatus(int $ticketId, int|string|null $targetStatusId, array $statusLabels): int|string|null
     {
         if (! $this->blockedState->shouldRestrictStatusChange($targetStatusId, $statusLabels)) {
