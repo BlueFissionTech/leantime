@@ -8,9 +8,23 @@ $statusLabels = $tpl->get('statusLabels');
 $ticketTypes = $tpl->get('ticketTypes');
 $dependencyTicketIds = $tpl->get('dependencyTicketIds') ?? [];
 $dependencyTickets = $tpl->get('dependencyTickets') ?? [];
+$dependencyScheduleMap = [];
+
+foreach ($dependencyTickets as $dependencyTicket) {
+    $dependencyId = (int) ($dependencyTicket['id'] ?? 0);
+    if ($dependencyId <= 0) {
+        continue;
+    }
+
+    $dependencyScheduleMap[$dependencyId] = [
+        'headline' => (string) ($dependencyTicket['headline'] ?? ''),
+        'finish' => (string) (($dependencyTicket['editTo'] ?? '') ?: ($dependencyTicket['dateToFinish'] ?? '')),
+    ];
+}
 
 ?>
 <input type="hidden" value="<?php $tpl->e($ticket->id); ?>" name="id" autocomplete="off" readonly/>
+<input type="hidden" id="dependencyScheduleMap" value="<?= $tpl->escape(json_encode($dependencyScheduleMap, JSON_THROW_ON_ERROR)) ?>" />
 
 <div class="row">
     <div class="col-md-9">

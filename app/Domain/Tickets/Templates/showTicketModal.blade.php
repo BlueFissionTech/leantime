@@ -191,6 +191,71 @@ $isBlocked = (bool) $tpl->get('isBlocked');
             leantime.commentsController.enableCommenterForms();
         <?php }?>
 
+        jQuery(".ticketTabs form.formModal").on("submit", function (event) {
+            var $form = jQuery(this);
+            var autoRescheduleEnabled = $form.find("input[name='autoRescheduleDependencies'][type='checkbox']").is(":checked");
+
+            if (autoRescheduleEnabled) {
+                return true;
+            }
+
+            var plannedStartDate = ($form.find("input[name='editFrom']").val() || "").trim();
+            var plannedStartTime = ($form.find("input[name='timeFrom']").val() || "00:00").trim();
+
+            if (plannedStartDate === "") {
+                return true;
+            }
+
+            var dependencyScheduleRaw = $form.find("#dependencyScheduleMap").val() || "{}";
+            var dependencyScheduleMap = {};
+
+            try {
+                dependencyScheduleMap = JSON.parse(dependencyScheduleRaw);
+            } catch (error) {
+                dependencyScheduleMap = {};
+            }
+
+            var selectedDependencyIds = $form.find("select[name='dependencyTicketIds[]']").val() || [];
+            if (!Array.isArray(selectedDependencyIds) || selectedDependencyIds.length === 0) {
+                return true;
+            }
+
+            var plannedStart = new Date(plannedStartDate + "T" + plannedStartTime);
+            if (Number.isNaN(plannedStart.getTime())) {
+                return true;
+            }
+
+            var latestDependency = null;
+
+            selectedDependencyIds.forEach(function (dependencyId) {
+                var dependency = dependencyScheduleMap[String(dependencyId)];
+                if (!dependency || !dependency.finish) {
+                    return;
+                }
+
+                var finish = new Date(String(dependency.finish).replace(" ", "T"));
+                if (Number.isNaN(finish.getTime())) {
+                    return;
+                }
+
+                if (!latestDependency || finish > latestDependency.finish) {
+                    latestDependency = {
+                        id: dependencyId,
+                        headline: dependency.headline || ("#" + dependencyId),
+                        finish: finish
+                    };
+                }
+            });
+
+            if (latestDependency && plannedStart < latestDependency.finish) {
+                event.preventDefault();
+                alert("Planned start must be on or after the latest predecessor finish. Either move the start date or enable auto-reschedule.");
+                return false;
+            }
+
+            return true;
+        });
+
     });
 
 </script>
