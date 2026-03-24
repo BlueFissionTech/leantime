@@ -334,15 +334,24 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                             </td>
 
                             <?php
-                            if ($row['dateToFinish'] == '0000-00-00 00:00:00' || $row['dateToFinish'] == '1969-12-31 00:00:00') {
+                            $dueDateAlert = app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
+                            $dueDateClass = match ($dueDateAlert) {
+                                'overdue' => 'ticket-due-date ticket-due-date--overdue',
+                                'dueSoon' => 'ticket-due-date ticket-due-date--soon',
+                                default => 'ticket-due-date',
+                            };
+
+                            if ($row['dateToFinish'] == '0000-00-00 00:00:00' || $row['dateToFinish'] == '1969-12-31 00:00:00' || $row['dateToFinish'] == null) {
                                 $date = $tpl->__('text.anytime');
+                                $dateOrder = '9999-12-31 23:59:59';
                             } else {
                                 $date = new DateTime($row['dateToFinish']);
                                 $date = $date->format($tpl->__('language.dateformat'));
+                                $dateOrder = $row['dateToFinish'];
                             }
                         ?>
-                            <td data-order="<?= $row['dateToFinish'] ?>" >
-                                <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo $date ?>" class="quickDueDates secretInput" data-id="<?php echo $row['id']; ?>" name="date" />
+                            <td data-order="<?= $dateOrder ?>" >
+                                <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo $date ?>" class="quickDueDates secretInput <?= $dueDateClass ?>" data-id="<?php echo $row['id']; ?>" name="date" />
                             </td>
                             <td data-order="<?= $tpl->e($row['planHours']); ?>">
                                 <input type="text" value="<?= $tpl->e($row['planHours']); ?>" name="planHours" class="small-input secretInput" onchange="leantime.ticketsController.updatePlannedHours(this, '<?= $row['id']?>'); jQuery(this).parent().attr('data-order',jQuery(this).val());" />

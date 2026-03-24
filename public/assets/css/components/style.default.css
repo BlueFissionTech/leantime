@@ -2171,6 +2171,18 @@ body .widgettitle .editHeadline:hover {
     margin: 0;
 }
 
+.ticket-due-date {
+    font-weight: 600;
+}
+
+.ticket-due-date--overdue {
+    color: var(--dark-red) !important;
+}
+
+.ticket-due-date--soon {
+    color: var(--yellow) !important;
+}
+
 #mainToggler {
     margin-bottom:15px;
     display:block;
