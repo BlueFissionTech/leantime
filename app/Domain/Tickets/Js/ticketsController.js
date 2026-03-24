@@ -1106,11 +1106,12 @@ leantime.ticketsController = (function () {
 
 
             let url = new URL(window.location.href);
-            let tab = url.searchParams.get("tab");
+            let tab = window.leantime.activeTicketTab || url.searchParams.get("tab");
 
             let activeTabIndex = 0;
             if (tab) {
                 activeTabIndex = jQuery('.ticketTabs').find('a[href="#' + tab + '"]').parent().index();
+                window.leantime.activeTicketTab = "";
             }
 
             jQuery('.ticketTabs').tabs({
