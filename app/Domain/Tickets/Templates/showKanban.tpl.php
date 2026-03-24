@@ -26,6 +26,10 @@ foreach ($allTicketGroups as $ticketGroup) {
     $blockedTicketIds += $ticketdependencyService->getBlockedTicketMap($groupTicketIds, $statusLabels);
 }
 
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
+
 // Get quick-add reopen state from session
 $reopenState = session()->get('quickadd_reopen', null);
 
