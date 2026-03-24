@@ -16,6 +16,8 @@ $isBlocked = (bool) $tpl->get('isBlocked');
             location.href="<?= BASE_URL ?>/tickets/showKanban?showTicketModal=<?php echo $ticket->id; ?>";
         }
     }
+    window.leantime = window.leantime || {};
+    window.leantime.activeTicketTab = <?= json_encode((string) ($tpl->get('activeTab') ?? '')) ?>;
 </script>
 
 <div style="min-width:70%">
