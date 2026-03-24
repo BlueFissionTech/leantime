@@ -170,4 +170,5 @@ class TicketsServiceTest extends TestCase
         $this->assertArrayNotHasKey('timeFrom', $result);
         $this->assertArrayNotHasKey('timeTo', $result);
     }
+
 }

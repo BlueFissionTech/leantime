@@ -20,6 +20,8 @@ $isBlocked = (bool) $tpl->get('isBlocked');
 
 <div style="min-width:70%">
 
+    <?php echo $tpl->displayNotification(); ?>
+
     <?php if ($ticket->dependingTicketId > 0) { ?>
         <small><a href="#/tickets/showTicket/<?= $ticket->dependingTicketId ?>"><?= $tpl->escape($ticket->parentHeadline) ?></a></small> //
     <?php } ?>
@@ -191,7 +193,7 @@ $isBlocked = (bool) $tpl->get('isBlocked');
             leantime.commentsController.enableCommenterForms();
         <?php }?>
 
-        jQuery(".ticketTabs form.formModal").on("submit", function (event) {
+        jQuery(document).off("submit.dependencyScheduleGuard", ".ticketTabs form.formModal").on("submit.dependencyScheduleGuard", ".ticketTabs form.formModal", function (event) {
             var $form = jQuery(this);
             var autoRescheduleEnabled = $form.find("input[name='autoRescheduleDependencies'][type='checkbox']").is(":checked");
 
@@ -220,7 +222,31 @@ $isBlocked = (bool) $tpl->get('isBlocked');
                 return true;
             }
 
-            var plannedStart = new Date(plannedStartDate + "T" + plannedStartTime);
+            var plannedStartDateObject = null;
+
+            try {
+                plannedStartDateObject = $form.find("input[name='editFrom']").datepicker("getDate");
+            } catch (error) {
+                plannedStartDateObject = null;
+            }
+
+            if (!(plannedStartDateObject instanceof Date) || Number.isNaN(plannedStartDateObject.getTime())) {
+                try {
+                    var dateFormat = leantime.dateHelper.getFormatFromSettings("dateformat", "jquery");
+                    plannedStartDateObject = jQuery.datepicker.parseDate(dateFormat, plannedStartDate);
+                } catch (error) {
+                    plannedStartDateObject = null;
+                }
+            }
+
+            if (!(plannedStartDateObject instanceof Date) || Number.isNaN(plannedStartDateObject.getTime())) {
+                return true;
+            }
+
+            var timeParts = plannedStartTime.split(":");
+            plannedStartDateObject.setHours(parseInt(timeParts[0] || "0", 10), parseInt(timeParts[1] || "0", 10), 0, 0);
+
+            var plannedStart = plannedStartDateObject;
             if (Number.isNaN(plannedStart.getTime())) {
                 return true;
             }
@@ -229,11 +255,23 @@ $isBlocked = (bool) $tpl->get('isBlocked');
 
             selectedDependencyIds.forEach(function (dependencyId) {
                 var dependency = dependencyScheduleMap[String(dependencyId)];
-                if (!dependency || !dependency.finish) {
+                if (!dependency) {
                     return;
                 }
 
-                var finish = new Date(String(dependency.finish).replace(" ", "T"));
+                var finish = null;
+                var finishTimestamp = parseInt(dependency.finishTimestamp || "", 10);
+
+                if (!Number.isNaN(finishTimestamp) && finishTimestamp > 0) {
+                    finish = new Date(finishTimestamp);
+                } else if (dependency.finish) {
+                    finish = new Date(String(dependency.finish).replace(" ", "T"));
+                }
+
+                if (!(finish instanceof Date)) {
+                    return;
+                }
+
                 if (Number.isNaN(finish.getTime())) {
                     return;
                 }
