@@ -19,6 +19,7 @@ foreach ($dependencyTickets as $dependencyTicket) {
     $dependencyScheduleMap[$dependencyId] = [
         'headline' => (string) ($dependencyTicket['headline'] ?? ''),
         'finish' => (string) (($dependencyTicket['editTo'] ?? '') ?: ($dependencyTicket['dateToFinish'] ?? '')),
+        'finishTimestamp' => format(($dependencyTicket['editTo'] ?? '') ?: ($dependencyTicket['dateToFinish'] ?? ''))->jsTimestamp(),
     ];
 }
 
