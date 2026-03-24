@@ -12,6 +12,10 @@ $searchCriteria = $tpl->get('searchCriteria');
 $statusLabels = $tpl->get('allTicketStates');
 $taskToggle = $tpl->get('enableTaskTypeToggle');
 
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
+
 ?>
 <form action="" method="get" id="ticketSearch">
 

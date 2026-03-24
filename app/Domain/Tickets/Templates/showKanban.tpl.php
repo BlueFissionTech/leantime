@@ -18,6 +18,10 @@ $priorities = $tpl->get('priorities');
 
 $allTicketGroups = $tpl->get('allTickets');
 
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
+
 // Get quick-add reopen state from session
 $reopenState = session()->get('quickadd_reopen', null);
 
