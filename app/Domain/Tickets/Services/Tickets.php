@@ -2107,7 +2107,7 @@ class Tickets
                 $values = $ticketdependencyService->alignScheduleToDependencies($values, $latestDependencyFinish);
             } elseif ($ticketdependencyService->violatesPlannedStart($values['editFrom'] ?: null, $latestDependencyFinish)) {
                 return [
-                    'msg' => 'Planned start must be on or after the latest predecessor finish. Move the start date or enable auto-reschedule.',
+                    'msg' => 'notifications.ticket_dependency_schedule_conflict',
                     'type' => 'error',
                 ];
             }
