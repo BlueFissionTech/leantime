@@ -31,7 +31,7 @@ class BlockedState
             return false;
         }
 
-        return in_array($status['statusType'] ?? '', ['INPROGRESS', 'DONE'], true);
+        return in_array($status['statusType'] ?? '', ['NEW', 'INPROGRESS', 'DONE'], true);
     }
 
     public function resolveBlockedStatusId(array $statusLabels): int

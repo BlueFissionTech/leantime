@@ -21,6 +21,12 @@ enum EntityRelationshipEnum: string
     case Dependency = 'dependency';
 
     /**
+     * Persists whether a ticket should auto-reschedule when predecessor dates move.
+     * Stored as a self-referential ticket relationship to avoid schema expansion.
+     */
+    case DependencyAutoReschedule = 'dependency_auto_reschedule';
+
+    /**
      * Add other relationship types as needed.
      */
 }

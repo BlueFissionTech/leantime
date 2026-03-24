@@ -160,4 +160,44 @@ class Ticketdependencies
             return true;
         });
     }
+
+    public function getAutoRescheduleEnabled(int $ticketId): bool
+    {
+        return $this->connection->table('zp_entity_relationship')
+            ->where('entityA', $ticketId)
+            ->where('entityAType', 'Ticket')
+            ->where('entityB', $ticketId)
+            ->where('entityBType', 'Ticket')
+            ->where('relationship', EntityRelationshipEnum::DependencyAutoReschedule->value)
+            ->exists();
+    }
+
+    public function setAutoRescheduleEnabled(int $ticketId, bool $enabled, int $createdBy): bool
+    {
+        return (bool) $this->connection->transaction(function () use ($ticketId, $enabled, $createdBy) {
+            $this->connection->table('zp_entity_relationship')
+                ->where('entityA', $ticketId)
+                ->where('entityAType', 'Ticket')
+                ->where('entityB', $ticketId)
+                ->where('entityBType', 'Ticket')
+                ->where('relationship', EntityRelationshipEnum::DependencyAutoReschedule->value)
+                ->delete();
+
+            if (! $enabled) {
+                return true;
+            }
+
+            $this->connection->table('zp_entity_relationship')->insert([
+                'entityA' => $ticketId,
+                'entityAType' => 'Ticket',
+                'entityB' => $ticketId,
+                'entityBType' => 'Ticket',
+                'relationship' => EntityRelationshipEnum::DependencyAutoReschedule->value,
+                'createdOn' => now(),
+                'createdBy' => $createdBy,
+            ]);
+
+            return true;
+        });
+    }
 }

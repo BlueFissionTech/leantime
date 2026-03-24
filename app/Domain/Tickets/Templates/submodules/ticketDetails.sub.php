@@ -422,7 +422,7 @@ $dependencyTickets = $tpl->get('dependencyTickets') ?? [];
                         <div class="">
                             <label class="checkbox" style="margin-top:0;">
                                 <input type="hidden" name="autoRescheduleDependencies" value="0" />
-                                <input type="checkbox" name="autoRescheduleDependencies" value="1" />
+                                <input type="checkbox" name="autoRescheduleDependencies" value="1" <?= ($tpl->get('autoRescheduleDependenciesEnabled') ? 'checked="checked"' : '') ?> />
                                 Auto-reschedule planned dates to follow predecessor changes
                             </label>
                         </div>

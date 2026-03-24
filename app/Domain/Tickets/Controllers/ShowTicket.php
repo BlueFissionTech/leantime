@@ -119,6 +119,7 @@ class ShowTicket extends Controller
         $this->tpl->assign('dependencyTicketIds', $this->ticketdependencyService->getDependencyTicketIds($ticket->id));
         $this->tpl->assign('dependencyTickets', $this->ticketdependencyService->getDependencies($ticket->id));
         $this->tpl->assign('isBlocked', $this->ticketdependencyService->isTicketBlocked($ticket->id, $statusLabels));
+        $this->tpl->assign('autoRescheduleDependenciesEnabled', $this->ticketdependencyService->getAutoRescheduleEnabled($ticket->id));
         $this->tpl->assign('ticketTypes', $this->ticketService->getTicketTypes());
         $this->tpl->assign('ticketTypeIcons', $this->ticketService->getTypeIcons());
         $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
