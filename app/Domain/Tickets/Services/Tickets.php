@@ -2814,6 +2814,9 @@ class Tickets
         $currentSprint = $this->sprintService->getCurrentSprintId((int) session('currentProject'));
 
         $searchCriteria = $this->prepareTicketSearchArray($params);
+        if (! is_array($searchCriteria)) {
+            $searchCriteria = [];
+        }
         $searchCriteria['orderBy'] = 'kanbansort';
 
         $allTickets = $this->getAllGrouped($searchCriteria);
