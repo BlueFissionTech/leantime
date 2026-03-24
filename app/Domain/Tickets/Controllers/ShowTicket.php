@@ -12,9 +12,12 @@ use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
 use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
+use Leantime\Domain\Supportcenter\Services\GithubElevation;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 use Leantime\Domain\Users\Services\Users as UserService;
+use Leantime\Domain\Auth\Services\Auth as AuthService;
+use Leantime\Domain\Auth\Models\Roles;
 use Symfony\Component\HttpFoundation\Response;
 
 class ShowTicket extends Controller
@@ -34,6 +37,7 @@ class ShowTicket extends Controller
     private UserService $userService;
 
     private TicketdependencyService $ticketdependencyService;
+    private GithubElevation $githubElevation;
 
     public function init(
         ProjectService $projectService,
@@ -43,7 +47,8 @@ class ShowTicket extends Controller
         CommentService $commentService,
         TimesheetService $timesheetService,
         UserService $userService,
-        TicketdependencyService $ticketdependencyService
+        TicketdependencyService $ticketdependencyService,
+        GithubElevation $githubElevation
     ): void {
         $this->projectService = $projectService;
         $this->ticketService = $ticketService;
@@ -53,6 +58,7 @@ class ShowTicket extends Controller
         $this->timesheetService = $timesheetService;
         $this->userService = $userService;
         $this->ticketdependencyService = $ticketdependencyService;
+        $this->githubElevation = $githubElevation;
 
         if (session()->exists('lastPage') === false) {
             session(['lastPage' => BASE_URL.'/tickets/showKanban']);
@@ -156,6 +162,8 @@ class ShowTicket extends Controller
         $this->tpl->assign('files', $files);
 
         $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
+        $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($id));
+        $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
 
         $this->tpl->assign('timesheetValues', [
             'kind' => '',
@@ -232,6 +240,17 @@ class ShowTicket extends Controller
                 $this->tpl->setNotification($e->getMessage(), 'error');
             }
 
+        }
+
+        if (isset($params['elevateGithub']) === true) {
+            if (! AuthService::userIsAtLeast(Roles::$manager, true)) {
+                $this->tpl->setNotification('Only manager-level users and above can elevate tickets to GitHub.', 'error');
+            } else {
+                $result = $this->githubElevation->createGithubIssue($id, $ticket, $params);
+                $this->tpl->setNotification($result['message'], $result['ok'] ? 'success' : 'error');
+            }
+
+            $tab = '#githubstatus';
         }
 
         // Save Ticket
