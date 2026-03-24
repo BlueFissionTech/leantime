@@ -20,6 +20,8 @@ $isBlocked = (bool) $tpl->get('isBlocked');
 
 <div style="min-width:70%">
 
+    <?php echo $tpl->displayNotification(); ?>
+
     <?php if ($ticket->dependingTicketId > 0) { ?>
         <small><a href="#/tickets/showTicket/<?= $ticket->dependingTicketId ?>"><?= $tpl->escape($ticket->parentHeadline) ?></a></small> //
     <?php } ?>
