@@ -1,4 +1,9 @@
-<div class="ticketBox fixed priority-border-{{ $row['priority'] }}" data-val="{{ $row['id'] }}">
+@php
+    $isBlocked = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class)
+        ->isTicketBlocked((int) $row['id'], $statusLabels);
+@endphp
+
+<div class="ticketBox fixed priority-border-{{ $row['priority'] }}" data-val="{{ $row['id'] }}" @if($isBlocked) style="opacity:0.7; filter:grayscale(0.15);" @endif>
     <div class="row">
         <div class="col-md-8 titleContainer">
             @if($cardType == "full")
@@ -8,6 +13,9 @@
                 @endif
             @endif
             <strong><a href="#/tickets/showTicket/{{ $row['id'] }}" >{{ $row['headline'] }}</a></strong>
+            @if($isBlocked)
+                <span class="label label-important" style="margin-left:6px;">Blocked</span>
+            @endif
 
         </div>
         <div class="col-md-4 timerContainer" style="padding:5px 15px;" id="timerContainer-{{ $row['id'] }}">

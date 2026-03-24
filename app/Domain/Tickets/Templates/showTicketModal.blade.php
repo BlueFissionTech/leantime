@@ -6,6 +6,7 @@ foreach ($__data as $var => $val) {
 $ticket = $tpl->get('ticket');
 $projectData = $tpl->get('projectData');
 $todoTypeIcons = $tpl->get('ticketTypeIcons');
+$isBlocked = (bool) $tpl->get('isBlocked');
 
 ?>
 <script type="text/javascript">
@@ -24,6 +25,9 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
     <?php } ?>
     <small class="tw-float-right tw-pr-md" style="padding:5px 30px 0px 0px">Created by <?php $tpl->e($ticket->userFirstname); ?> <?php $tpl->e($ticket->userLastname); ?> | Last Updated: <?= format($ticket->date)->date(); ?> </small>
     <h1 class="tw-mb-0" style="margin-bottom:0px;"><i class="fa <?php echo $todoTypeIcons[strtolower($ticket->type)]; ?>"></i> #<?= $ticket->id ?> - <?php $tpl->e($ticket->headline); ?></h1>
+    <?php if ($isBlocked) { ?>
+        <div class="label label-important" style="display:inline-block; margin-top:8px;">Blocked by dependency</div>
+    <?php } ?>
 
     <br />
 

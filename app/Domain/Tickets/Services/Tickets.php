@@ -22,6 +22,7 @@ use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
+use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
@@ -2081,6 +2082,8 @@ class Tickets
             'dependingTicketId' => $values['dependingTicketId'] ?? '',
             'milestoneid' => $values['milestoneid'] ?? '',
             'collaborators' => $values['collaborators'] ?? [],
+            'dependencyTicketIds' => $values['dependencyTicketIds'] ?? [],
+            'autoRescheduleDependencies' => (int) ($values['autoRescheduleDependencies'] ?? 0),
         ];
 
         if ($values['projectId'] === null || $values['projectId'] === '' || $values['projectId'] === false) {
@@ -2092,9 +2095,41 @@ class Tickets
         }
 
         $values = $this->prepareTicketDates($values);
+        $ticketdependencyService = $this->getTicketdependencyService();
+        $latestDependencyFinish = $ticketdependencyService->getLatestDependencyFinish(
+            (int) $values['id'],
+            (int) $values['projectId'],
+            $values['dependencyTicketIds']
+        );
+
+        if ($latestDependencyFinish !== null) {
+            if ($values['autoRescheduleDependencies'] === 1) {
+                $values = $ticketdependencyService->alignScheduleToDependencies($values, $latestDependencyFinish);
+            } elseif ($ticketdependencyService->violatesPlannedStart($values['editFrom'] ?: null, $latestDependencyFinish)) {
+                return [
+                    'msg' => 'Planned start must be on or after the latest predecessor finish. Move the start date or enable auto-reschedule.',
+                    'type' => 'error',
+                ];
+            }
+        }
+
+        $statusLabels = $this->getStatusLabels($values['projectId']);
+        $values['status'] = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
 
         // Update Ticket
         if ($this->ticketRepository->updateTicket($values, $values['id']) === true) {
+            $ticketdependencyService->syncDependencies(
+                (int) $values['id'],
+                $values['dependencyTicketIds'],
+                (int) (session('userdata.id') ?? -1)
+            );
+
+            $coercedStatus = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
+            if ((string) $coercedStatus !== (string) $values['status']) {
+                $this->ticketRepository->patchTicket($values['id'], ['status' => $coercedStatus]);
+                $values['status'] = $coercedStatus;
+            }
+
             $subject = sprintf($this->language->__('email_notifications.todo_update_subject'), $values['id'], strip_tags($values['headline']));
             $actual_link = BASE_URL.'/dashboard/home#/tickets/showTicket/'.$values['id'];
             $message = sprintf($this->language->__('email_notifications.todo_update_message'), session('userdata.name'), $values['headline']);
@@ -2170,6 +2205,14 @@ class Tickets
 
         if (! $ticket) {
             return false;
+        }
+
+        if (isset($params['status'])) {
+            $params['status'] = $this->getTicketdependencyService()->coerceBlockedStatus(
+                (int) $id,
+                $params['status'],
+                $this->getStatusLabels($ticket->projectId)
+            );
         }
 
         $params = $this->prepareTicketDates($params);
@@ -2427,6 +2470,11 @@ class Tickets
                 if (is_array($tickets) === true) {
                     foreach ($tickets as $key => $ticketString) {
                         $id = substr($ticketString, 9);
+                        $status = $this->getTicketdependencyService()->coerceBlockedStatus(
+                            (int) $id,
+                            $status,
+                            $this->getStatusLabels(session('currentProject'))
+                        );
 
                         if ($this->ticketRepository->updateTicketStatus($id, $status, ($key * 100), $handler) === false) {
                             return false;
@@ -3665,5 +3713,10 @@ class Tickets
         }
 
         return $todo;
+    }
+
+    private function getTicketdependencyService(): TicketdependencyService
+    {
+        return app()->make(TicketdependencyService::class);
     }
 }

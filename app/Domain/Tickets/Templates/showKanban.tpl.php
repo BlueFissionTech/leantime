@@ -15,8 +15,16 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
 
 $efforts = $tpl->get('efforts');
 $priorities = $tpl->get('priorities');
+$statusLabels = $tpl->get('allTicketStates');
 
 $allTicketGroups = $tpl->get('allTickets');
+$ticketdependencyService = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class);
+$blockedTicketIds = [];
+
+foreach ($allTicketGroups as $ticketGroup) {
+    $groupTicketIds = array_map(fn ($ticketRow) => (int) $ticketRow['id'], $ticketGroup);
+    $blockedTicketIds += $ticketdependencyService->getBlockedTicketMap($groupTicketIds, $statusLabels);
+}
 
 // Get quick-add reopen state from session
 $reopenState = session()->get('quickadd_reopen', null);
@@ -207,7 +215,8 @@ $allTickets = $group['items'];
 
                                     <?php foreach ($allTickets as $row) { ?>
                                         <?php if ($row['status'] == $key) {?>
-                                        <div class="ticketBox moveable container priority-border-<?= $row['priority']?>" id="ticket_<?php echo $row['id']; ?>">
+                                        <?php $isBlocked = $blockedTicketIds[(int) $row['id']] ?? false; ?>
+                                        <div class="ticketBox moveable container priority-border-<?= $row['priority']?>" id="ticket_<?php echo $row['id']; ?>" style="<?= $isBlocked ? 'opacity:0.7; filter:grayscale(0.15);' : '' ?>">
 
                                             <div class="row" >
 
@@ -225,6 +234,9 @@ $allTickets = $group['items'];
                                                     <?php } ?>
                                                     <small><i class="fa <?php echo $todoTypeIcons[strtolower($row['type'])]; ?>"></i> <?php echo $tpl->__('label.'.strtolower($row['type'])); ?></small>
                                                     <small>#<?php echo $row['id']; ?></small>
+                                                    <?php if ($isBlocked) { ?>
+                                                        <small class="label label-important" style="margin-left:6px;">Blocked</small>
+                                                    <?php } ?>
                                                     <div class="kanbanCardContent">
                                                         <h4><a href="#/tickets/showTicket/<?php echo $row['id']; ?>" data-hx-get="<?= BASE_URL?>/tickets/showTicket/<?php echo $row['id']; ?>" hx-swap="none" preload="mouseover"><?php $tpl->e($row['headline']); ?></a></h4>
 

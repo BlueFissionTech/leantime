@@ -6,6 +6,8 @@ $ticket = $tpl->get('ticket');
 $remainingHours = $tpl->get('remainingHours');
 $statusLabels = $tpl->get('statusLabels');
 $ticketTypes = $tpl->get('ticketTypes');
+$dependencyTicketIds = $tpl->get('dependencyTicketIds') ?? [];
+$dependencyTickets = $tpl->get('dependencyTickets') ?? [];
 
 ?>
 <input type="hidden" value="<?php $tpl->e($ticket->id); ?>" name="id" autocomplete="off" readonly/>
@@ -323,6 +325,53 @@ $ticketTypes = $tpl->get('ticketTypes');
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label class="control-label">
+                            Predecessors
+                            <a href="javascript:void(0)" class="infoToolTip" data-placement="left" data-toggle="tooltip" data-tippy-content="Use predecessors for tasks that must finish before this one can begin. A blocked task cannot move into In Progress or Done until every predecessor is complete.">
+                                &nbsp;<i class="fa fa-question-circle"></i>&nbsp;
+                            </a>
+                        </label>
+                        <div class="">
+                            <div class="form-group">
+                                <select name="dependencyTicketIds[]" class="span11" multiple="multiple" data-placeholder="Select predecessor tasks">
+                                    <?php
+                                    if (is_array($tpl->get('ticketParents'))) {
+                                        foreach ($tpl->get('ticketParents') as $ticketRow) {
+                                            echo "<option value='".$ticketRow->id."'";
+
+                                            if (in_array((int) $ticketRow->id, array_map('intval', $dependencyTicketIds), true)) {
+                                                echo " selected='selected' ";
+                                            }
+
+                                            echo '>#'.$ticketRow->id.' '.$tpl->escape($ticketRow->headline).'</option>';
+                                        }
+                                    }?>
+                                </select>
+                            </div>
+                            <div class="small muted" style="margin-top:4px;">
+                                Choose the tasks that must finish before this task can start.
+                            </div>
+                            <?php if (! empty($dependencyTickets)) { ?>
+                                <div class="small" style="margin-top:6px;">
+                                    <?php foreach ($dependencyTickets as $dependencyTicket) { ?>
+                                        <div>
+                                            <a href="#/tickets/showTicket/<?php echo (int) $dependencyTicket['id']; ?>">
+                                                #<?php echo (int) $dependencyTicket['id']; ?> <?php echo $tpl->escape($dependencyTicket['headline']); ?>
+                                            </a>
+                                            <?php if (! empty($dependencyTicket['editTo']) || ! empty($dependencyTicket['dateToFinish'])) { ?>
+                                                <span class="muted">
+                                                    &mdash; planned finish
+                                                    <?php echo format($dependencyTicket['editTo'] ?: $dependencyTicket['dateToFinish'])->date(); ?>
+                                                </span>
+                                            <?php } ?>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -360,6 +409,22 @@ $ticketTypes = $tpl->get('ticketTypes');
                             <input type="time" class="timepicker" style="width:120px;" id="timeTo" autocomplete="off"
                                    value="<?= format($ticket->editTo)->time24() ?>"
                                    name="timeTo"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">
+                            Dependency scheduling
+                            <a href="javascript:void(0)" class="infoToolTip" data-placement="left" data-toggle="tooltip" data-tippy-content="When enabled, saving this task will move its planned dates forward if a predecessor finishes later than the current planned start.">
+                                &nbsp;<i class="fa fa-question-circle"></i>&nbsp;
+                            </a>
+                        </label>
+                        <div class="">
+                            <label class="checkbox" style="margin-top:0;">
+                                <input type="hidden" name="autoRescheduleDependencies" value="0" />
+                                <input type="checkbox" name="autoRescheduleDependencies" value="1" checked="checked" />
+                                Auto-reschedule planned dates to follow predecessor changes
+                            </label>
                         </div>
                     </div>
 
