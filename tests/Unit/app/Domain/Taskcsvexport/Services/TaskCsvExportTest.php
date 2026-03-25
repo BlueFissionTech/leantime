@@ -2,6 +2,8 @@
 
 namespace Unit\app\Domain\Taskcsvexport\Services;
 
+require_once __DIR__.'/../../../../../../app/Domain/Taskcsvexport/Services/TaskCsvExport.php';
+
 use Leantime\Domain\Taskcsvexport\Services\TaskCsvExport;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Users\Services\Users as UserService;
@@ -25,7 +27,7 @@ class TaskCsvExportTest extends TestCase
                     'editorLastname' => 'Doe',
                     'dateToFinish' => '2026-03-20 04:00:00',
                     'milestoneHeadline' => 'Launch',
-                    'clientName' => 'Morpro',
+                    'clientName' => 'Client Product',
                     'projectName' => 'PM',
                     'priority' => 2,
                 ],
@@ -80,7 +82,7 @@ class TaskCsvExportTest extends TestCase
                 'editorLastname' => 'Lee',
                 'dateToFinish' => '2026-03-30 12:00:00',
                 'milestoneHeadline' => '',
-                'clientName' => 'Morpro',
+                'clientName' => 'Client Product',
                 'projectName' => 'PM',
                 'priority' => 1,
             ],
@@ -102,7 +104,7 @@ class TaskCsvExportTest extends TestCase
             $header
         );
         $this->assertSame(
-            ['Alpha', 'Delivery', 'Sam Lee', '2026-03-30', 'Morpro', 'Critical'],
+            ['Alpha', 'Delivery', 'Sam Lee', '2026-03-30', 'Client Product', 'Critical'],
             $row
         );
     }
