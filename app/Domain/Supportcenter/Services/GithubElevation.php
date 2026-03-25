@@ -35,7 +35,7 @@ class GithubElevation
         $state = $this->resolveIssueState($ticketId, $issue);
 
         return [
-            'status' => $state === 'closed' ? 'Done' : 'In Progress',
+            'status' => $state === 'closed' ? 'Done' : 'Backlog',
             'isDone' => $state === 'closed',
             'isInProgress' => $state !== 'closed',
         ];
@@ -64,6 +64,11 @@ class GithubElevation
 
         if ($title === '' || $summary === '') {
             return ['ok' => false, 'message' => 'GitHub title and technical summary are required.'];
+        }
+
+        $repoCheck = $this->checkRepositoryAccess($baseUrl, $repo, $token);
+        if ($repoCheck !== true) {
+            return ['ok' => false, 'message' => $repoCheck];
         }
 
         $body = $this->buildIssueBody($ticketId, $ticket, $summary, $reproduction, $impact);
@@ -107,6 +112,32 @@ class GithubElevation
         $this->settingRepository->saveSetting($this->getSettingKey($ticketId), json_encode($meta));
 
         return ['ok' => true, 'message' => 'Elevated to GitHub issue #'.$meta['number'].'.', 'issue' => $meta];
+    }
+
+    private function checkRepositoryAccess(string $baseUrl, string $repo, string $token): bool|string
+    {
+        $response = Http::withoutVerifying()
+            ->withToken($token)
+            ->withUserAgent('BlueFission-Leantime-Supportcenter')
+            ->withHeaders([
+                'Accept' => 'application/vnd.github+json',
+                'X-GitHub-Api-Version' => '2022-11-28',
+            ])
+            ->get($baseUrl.'/repos/'.$repo);
+
+        if ($response->successful()) {
+            return true;
+        }
+
+        $requestId = trim((string) $response->header('X-GitHub-Request-Id', ''));
+
+        if ($response->status() === 404) {
+            return 'GitHub repository '.$repo.' is not visible to the configured token. Confirm repo name, repo access, and org authorization'.($requestId !== '' ? ' (request '.$requestId.')' : '.');
+        }
+
+        $message = trim((string) ($response->json('message') ?? ''));
+
+        return 'GitHub repository preflight failed: '.$response->status().($message !== '' ? ' - '.$message : '').($requestId !== '' ? ' (request '.$requestId.')' : '');
     }
 
     private function buildIssueBody(int $ticketId, object $ticket, string $summary, string $reproduction, string $impact): string
