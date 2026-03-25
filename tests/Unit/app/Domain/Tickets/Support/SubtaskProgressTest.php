@@ -2,6 +2,8 @@
 
 namespace Unit\app\Domain\Tickets\Support;
 
+require_once __DIR__.'/../../../../../../app/Domain/Tickets/Support/SubtaskProgress.php';
+
 use Leantime\Domain\Tickets\Support\SubtaskProgress;
 use PHPUnit\Framework\TestCase;
 
