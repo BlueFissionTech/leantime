@@ -148,3 +148,6 @@ tests/Httprequests/http-client.private.env.json
 /AGENTS.md
 /AGENTS.behavior.md
 /harness.json
+/.env
+/.env.*
+!/.env.example
