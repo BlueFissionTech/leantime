@@ -28,6 +28,9 @@ class TicketsSearchScopeSourceTest extends TestCase
         $source = file_get_contents(__DIR__.'/../../../../../../app/Domain/Tickets/Repositories/Tickets.php');
 
         $this->assertIsString($source);
-        $this->assertStringContainsString("preg_match('/^[0-9,]+\$/', (string) \$searchCriteria['sprint'])", $source);
+        $this->assertSame(
+            2,
+            substr_count($source, "preg_match('/^[0-9,]+\$/', (string) \$searchCriteria['sprint'])")
+        );
     }
 }

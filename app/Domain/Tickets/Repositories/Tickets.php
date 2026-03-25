@@ -1206,7 +1206,13 @@ class Tickets
             });
         }
 
-        if (isset($searchCriteria['sprint']) && $searchCriteria['sprint'] > 0 && $searchCriteria['sprint'] != 'all') {
+        if (
+            isset($searchCriteria['sprint']) &&
+            $searchCriteria['sprint'] !== '' &&
+            $searchCriteria['sprint'] !== 'all' &&
+            $searchCriteria['sprint'] !== 'backlog' &&
+            preg_match('/^[0-9,]+$/', (string) $searchCriteria['sprint'])
+        ) {
             $sprintIds = explode(',', $searchCriteria['sprint']);
             $query->where(function ($q) use ($sprintIds) {
                 $q->whereIn('zp_tickets.sprint', $sprintIds)
