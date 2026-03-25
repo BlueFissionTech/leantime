@@ -17,6 +17,8 @@ $efforts = $tpl->get('efforts');
 $priorities = $tpl->get('priorities');
 
 $allTicketGroups = $tpl->get('allTickets');
+/** @var \Leantime\Domain\Tickets\Support\KanbanTicketOrder $kanbanTicketOrder */
+$kanbanTicketOrder = app(\Leantime\Domain\Tickets\Support\KanbanTicketOrder::class);
 
 if (! is_array($searchCriteria)) {
     $searchCriteria = [];
@@ -111,8 +113,8 @@ $columnHeaderClass = $isGroupByActive ? 'groupby-active' : '';
         </div>
 
         <?php foreach ($allTicketGroups as $group) {?>
-             <?php
-$allTickets = $group['items'];
+            <?php
+$allTickets = $kanbanTicketOrder->sortByDueDate($group['items']);
             ?>
 
             <?php if ($group['label'] != 'all') { ?>
