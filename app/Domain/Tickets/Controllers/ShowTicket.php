@@ -250,7 +250,7 @@ class ShowTicket extends Controller
                 $this->tpl->setNotification($result['message'], $result['ok'] ? 'success' : 'error');
             }
 
-            $tab = '#githubstatus';
+            $tab = '?tab=githubstatus';
         }
 
         // Save Ticket
