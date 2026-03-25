@@ -11,6 +11,6 @@ class ShowTicketSourceTest extends TestCase
         $controller = file_get_contents(__DIR__.'/../../../../../../app/Domain/Tickets/Controllers/ShowTicket.php');
 
         $this->assertIsString($controller);
-        $this->assertStringContainsString("\$tab = '?tab=githubstatus';", $controller);
+        $this->assertStringContainsString("return \$this->renderTicketModal(\$freshTicket, 'githubstatus');", $controller);
     }
 }
