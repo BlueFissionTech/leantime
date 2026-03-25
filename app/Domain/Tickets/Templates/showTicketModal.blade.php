@@ -129,7 +129,7 @@ $isBlocked = (bool) $tpl->get('isBlocked');
                             <p class="small muted">Only the sanitized engineering status is shown here.</p>
                         <?php } elseif ($tpl->get('canElevateGitHub')) { ?>
                             <p class="small muted">Use this when the ticket has been validated as an engineering/code issue. The created GitHub issue text should stay sanitized for public visibility.</p>
-                            <form action="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>" method="post">
+                            <form class="formModal" action="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>" method="post">
                                 <input type="hidden" name="elevateGithub" value="1" />
                                 <div class="form-group">
                                     <label class="control-label" for="githubTitle">GitHub Title</label>
