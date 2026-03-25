@@ -20,7 +20,7 @@ if (! is_array($searchCriteria)) {
 <form action="" method="get" id="ticketSearch">
 
     <input type="hidden" value="1" name="search"/>
-    <input type="hidden" value="<?php echo $searchCriteria['currentProject'] === '' ? 'all' : session('currentProject'); ?>" name="projectId" id="projectIdInput"/>
+    <input type="hidden" value="<?php echo $searchCriteria['currentProject'] === '' ? 'all' : $searchCriteria['currentProject']; ?>" name="projectId" id="projectIdInput"/>
 
     <div class="filterWrapper" style="display:inline-block; position:relative; vertical-align: bottom; margin-bottom:20px;">
         <a onclick="leantime.ticketsController.toggleFilterBar();" style="margin-right:5px;"
@@ -70,14 +70,15 @@ if (! is_array($searchCriteria)) {
                 <div class="">
                     <label class="inline"><?= $tpl->__('label.project') ?></label>
                     <div class="form-group">
-                        <span class="checkbox">
-                            <input
-                                type="checkbox"
-                                id="allProjectsToggle"
-                                <?= $searchCriteria['currentProject'] === '' ? "checked='checked'" : '' ?>
-                            />
-                            <label for="allProjectsToggle">Search all accessible projects</label>
-                        </span>
+                        <select id="projectScopeSelect" class="form-control">
+                            <option value="<?php echo $searchCriteria['currentProject'] === '' ? 'current' : $searchCriteria['currentProject']; ?>" <?= $searchCriteria['currentProject'] !== '' ? "selected='selected'" : '' ?>>
+                                Current project
+                            </option>
+                            <option value="all" <?= $searchCriteria['currentProject'] === '' ? "selected='selected'" : '' ?>>
+                                All accessible projects
+                            </option>
+                        </select>
+                        <p class="small muted" style="margin-top:6px;">Cross-project search clears project-specific milestone and sprint filters.</p>
                     </div>
                 </div>
 
@@ -265,10 +266,12 @@ if (! is_array($searchCriteria)) {
             },
         });
 
-        jQuery('#allProjectsToggle').on('change', function () {
-            var useAllProjects = jQuery(this).is(':checked');
-            jQuery('#projectIdInput').val(useAllProjects ? 'all' : '<?= session('currentProject'); ?>');
+        jQuery('#projectScopeSelect').on('change', function () {
+            var selectedProjectScope = jQuery(this).val();
+            var useAllProjects = selectedProjectScope === 'all';
+            jQuery('#projectIdInput').val(useAllProjects ? 'all' : selectedProjectScope);
             jQuery('#milestoneSelect').prop('disabled', useAllProjects);
+            jQuery('#sprintSelect').prop('disabled', useAllProjects);
         }).trigger('change');
 
         leantime.ticketsController.initTicketSearchSubmit('<?= $currentUrlPath; ?>');

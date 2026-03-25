@@ -1163,6 +1163,7 @@ leantime.ticketsController = (function () {
 
             if (project === "all") {
                 milestones = "";
+                sprints = "";
             }
 
             var query = "?search=true";
@@ -1211,6 +1212,7 @@ leantime.ticketsController = (function () {
 
             if (project === "all") {
                 milestones = "";
+                sprints = "";
             }
 
             var query = "?search=true";
