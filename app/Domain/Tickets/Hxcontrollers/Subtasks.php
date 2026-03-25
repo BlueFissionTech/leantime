@@ -41,6 +41,7 @@ class Subtasks extends HtmxController
 
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('ticketSubtasks', $ticketSubtasks);
+        $this->tpl->assign('subtaskSummary', $this->ticketService->getSubtaskSummary($ticket->id));
         $this->tpl->assign('statusLabels', $statusLabels);
         $this->tpl->assign('efforts', $efforts);
     }
@@ -62,6 +63,7 @@ class Subtasks extends HtmxController
 
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('ticketSubtasks', $ticketSubtasks);
+        $this->tpl->assign('subtaskSummary', $this->ticketService->getSubtaskSummary((int) $id));
         $this->tpl->assign('statusLabels', $statusLabels);
         $this->tpl->assign('efforts', $efforts);
 
@@ -80,6 +82,8 @@ class Subtasks extends HtmxController
             $this->tpl->setNotification($this->language->__('notifications.subtask_delete_error'), 'error');
         }
 
+        $this->ticketService->syncParentCompletionFromSubtasks((int) $parentId);
+
         $ticket = $this->ticketService->getTicket($parentId);
         $ticketSubtasks = $this->ticketService->getAllSubtasks($parentId);
         $statusLabels = $this->ticketService->getStatusLabels(session('currentProject'));
@@ -87,6 +91,7 @@ class Subtasks extends HtmxController
 
         $this->tpl->assign('ticket', $ticket);
         $this->tpl->assign('ticketSubtasks', $ticketSubtasks);
+        $this->tpl->assign('subtaskSummary', $this->ticketService->getSubtaskSummary((int) $parentId));
         $this->tpl->assign('statusLabels', $statusLabels);
         $this->tpl->assign('efforts', $efforts);
     }
