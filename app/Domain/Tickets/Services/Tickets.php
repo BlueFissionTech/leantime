@@ -258,6 +258,10 @@ class Tickets
             $searchCriteria['currentProject'] = $searchParams['currentProject'];
         }
 
+        if (isset($searchParams['projectId']) === true) {
+            $searchCriteria['currentProject'] = $searchParams['projectId'] === 'all' ? '' : $searchParams['projectId'];
+        }
+
         if (isset($searchParams['currentUser']) === true) {
             $searchCriteria['currentUser'] = $searchParams['currentUser'];
         }
@@ -2843,13 +2847,8 @@ class Tickets
         $sprints = $this->sprintService->getAllSprints(session('currentProject'));
         $futureSprints = $this->sprintService->getAllFutureSprints((int) session('currentProject'));
 
-        $users = $this->projectService->getUsersAssignedToProject(session('currentProject'));
-
-        $milestones = $this->getAllMilestones([
-            'sprint' => '',
-            'type' => 'milestone',
-            'currentProject' => session('currentProject'),
-        ]);
+        $users = $this->getTicketFilterUsers($searchCriteria['currentProject']);
+        $milestones = $this->getTicketFilterMilestones($searchCriteria['currentProject']);
 
         $groupByOptions = $this->getGroupByFieldOptions();
         $newField = $this->getNewFieldOptions();
@@ -2882,6 +2881,55 @@ class Tickets
             'sortOptions' => $sortOptions,
             'searchParams' => $searchUrlString,
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getTicketFilterUsers(string|int|null $projectId): array
+    {
+        if ($projectId !== null && $projectId !== '' && $projectId !== 'all') {
+            return $this->projectService->getUsersAssignedToProject((int) $projectId);
+        }
+
+        $usersById = [];
+        $projects = $this->projectService->getProjectsUserHasAccessTo(session('userdata.id'));
+
+        if (is_array($projects)) {
+            foreach ($projects as $project) {
+                $projectUsers = $this->projectService->getUsersAssignedToProject((int) $project['id']);
+                foreach ($projectUsers as $user) {
+                    $usersById[$user['id']] = $user;
+                }
+            }
+        }
+
+        return array_values($usersById);
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    private function getTicketFilterMilestones(string|int|null $projectId): array
+    {
+        if ($projectId !== null && $projectId !== '' && $projectId !== 'all') {
+            return $this->getAllMilestones([
+                'sprint' => '',
+                'type' => 'milestone',
+                'currentProject' => $projectId,
+            ]);
+        }
+
+        $flattenedMilestones = [];
+        $milestonesByProject = $this->getAllMilestonesByUserProjects(session('userdata.id'));
+
+        foreach ($milestonesByProject as $projectMilestones) {
+            foreach ($projectMilestones as $milestone) {
+                $flattenedMilestones[$milestone->id] = $milestone;
+            }
+        }
+
+        return array_values($flattenedMilestones);
     }
 
     /**

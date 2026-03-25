@@ -1161,6 +1161,10 @@ leantime.ticketsController = (function () {
             var groupBy = jQuery("input[name='groupBy']:checked").val();
             var showTasks = jQuery("input[name='showTasks']:checked").val();
 
+            if (project === "all") {
+                milestones = "";
+            }
+
             var query = "?search=true";
             if (project != "" && project != undefined) {
                 query = query + "&projectId=" + project}
@@ -1204,6 +1208,10 @@ leantime.ticketsController = (function () {
             var status = jQuery("#statusSelect").val();
             var sort = jQuery("#sortBySelect").val();
             var groupBy = jQuery("input[name='groupBy']:checked").val();
+
+            if (project === "all") {
+                milestones = "";
+            }
 
             var query = "?search=true";
         if (project != "" && project != undefined) {
