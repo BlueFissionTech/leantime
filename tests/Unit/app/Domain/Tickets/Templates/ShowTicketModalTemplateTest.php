@@ -34,4 +34,13 @@ class ShowTicketModalTemplateTest extends TestCase
         $this->assertStringContainsString('<div class="tw-mt-xs">', $template);
         $this->assertStringContainsString('<span class="label label-important">Blocked</span>', $template);
     }
+
+    public function test_modal_template_submits_github_elevation_inside_modal_flow(): void
+    {
+        $template = file_get_contents(__DIR__.'/../../../../../../app/Domain/Tickets/Templates/showTicketModal.blade.php');
+
+        $this->assertIsString($template);
+        $this->assertStringContainsString('<form class="formModal" action="<?= BASE_URL ?>/tickets/showTicket/<?php echo $ticket->id ?>" method="post">', $template);
+        $this->assertStringContainsString('<input type="hidden" name="elevateGithub" value="1" />', $template);
+    }
 }
