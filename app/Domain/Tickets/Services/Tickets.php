@@ -2827,14 +2827,15 @@ class Tickets
      */
     public function getTicketTemplateAssignments($params): array
     {
-
-        $currentSprint = $this->sprintService->getCurrentSprintId((int) session('currentProject'));
-
         $searchCriteria = $this->prepareTicketSearchArray($params);
         if (! is_array($searchCriteria)) {
             $searchCriteria = [];
         }
         $searchCriteria['orderBy'] = 'kanbansort';
+
+        $filterProjectId = $searchCriteria['currentProject'] ?? session('currentProject');
+        $isAllProjectsScope = $filterProjectId === '' || $filterProjectId === null || $filterProjectId === 'all';
+        $currentSprint = $isAllProjectsScope ? '' : $this->sprintService->getCurrentSprintId((int) $filterProjectId);
 
         $allTickets = $this->getAllGrouped($searchCriteria);
         $allTicketStates = $this->getStatusLabels();
@@ -2852,8 +2853,8 @@ class Tickets
 
         $onTheClock = $this->timesheetService->isClocked(session('userdata.id'));
 
-        $sprints = $this->sprintService->getAllSprints(session('currentProject'));
-        $futureSprints = $this->sprintService->getAllFutureSprints((int) session('currentProject'));
+        $sprints = $isAllProjectsScope ? [] : $this->sprintService->getAllSprints($filterProjectId);
+        $futureSprints = $isAllProjectsScope ? [] : $this->sprintService->getAllFutureSprints((int) $filterProjectId);
 
         $users = $this->getTicketFilterUsers($searchCriteria['currentProject']);
         $milestones = $this->getTicketFilterMilestones($searchCriteria['currentProject']);
@@ -2870,7 +2871,7 @@ class Tickets
         $allTickets = self::dispatchFilter('filterTickets', $allTickets);
 
         return [
-            'currentSprint' => session('currentSprint'),
+            'currentSprint' => $isAllProjectsScope ? '' : ($currentSprint ?: session('currentSprint')),
             'searchCriteria' => $searchCriteria,
             'allTickets' => $allTickets,
             'allTicketStates' => $allTicketStates,
