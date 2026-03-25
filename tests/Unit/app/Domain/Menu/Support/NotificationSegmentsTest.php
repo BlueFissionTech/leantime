@@ -2,6 +2,8 @@
 
 namespace Unit\app\Domain\Menu\Support;
 
+require_once __DIR__.'/../../../../../../app/Domain/Menu/Support/NotificationSegments.php';
+
 use Leantime\Domain\Menu\Support\NotificationSegments;
 use PHPUnit\Framework\TestCase;
 
