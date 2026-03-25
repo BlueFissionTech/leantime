@@ -321,10 +321,18 @@ class Tickets
             $searchCriteria['clients'] = $searchParams['clients'];
         }
 
+        if ($searchCriteria['currentProject'] === '') {
+            $searchCriteria['sprint'] = '';
+        }
+
         // The sprint selector is just a filter but remains in place across the session. Setting session here when it's selected
         if (isset($searchParams['sprint']) === true) {
-            $searchCriteria['sprint'] = $searchParams['sprint'];
-            session(['currentSprint' => $searchCriteria['sprint']]);
+            if ($searchCriteria['currentProject'] === '') {
+                $searchCriteria['sprint'] = '';
+            } else {
+                $searchCriteria['sprint'] = $searchParams['sprint'];
+                session(['currentSprint' => $searchCriteria['sprint']]);
+            }
         }
 
         return $searchCriteria;
