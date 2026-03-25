@@ -25,7 +25,11 @@ class NotificationSegmentsTest extends TestCase
         $this->assertSame([3, 4], array_column($segments['activity'], 'id'));
 
         $this->assertSame(3, $segments['counts']['unreadTotal']);
+        $this->assertSame(2, $segments['counts']['totalActivityCount']);
+        $this->assertSame(1, $segments['counts']['totalCommentCount']);
         $this->assertSame(1, $segments['counts']['totalMentionCount']);
+        $this->assertSame(1, $segments['counts']['totalNewActivity']);
+        $this->assertSame(1, $segments['counts']['totalNewComments']);
         $this->assertSame(1, $segments['counts']['totalNewMentions']);
         $this->assertSame(3, $segments['counts']['totalNotificationCount']);
         $this->assertSame(2, $segments['counts']['totalNewNotifications']);
@@ -41,6 +45,8 @@ class NotificationSegmentsTest extends TestCase
         $this->assertSame([], $segments['comments']);
         $this->assertSame([5], array_column($segments['activity'], 'id'));
         $this->assertSame(0, $segments['counts']['unreadTotal']);
+        $this->assertSame(1, $segments['counts']['totalActivityCount']);
+        $this->assertSame(0, $segments['counts']['totalCommentCount']);
         $this->assertSame(1, $segments['counts']['totalNotificationCount']);
     }
 }

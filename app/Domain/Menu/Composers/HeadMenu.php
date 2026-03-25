@@ -84,7 +84,11 @@ class HeadMenu extends Composer
         return [
             'newNotificationCount' => $notificationSegments['counts']['unreadTotal'],
             'totalNotificationCount' => $notificationSegments['counts']['totalNotificationCount'],
+            'totalActivityCount' => $notificationSegments['counts']['totalActivityCount'],
+            'totalCommentCount' => $notificationSegments['counts']['totalCommentCount'],
             'totalMentionCount' => $notificationSegments['counts']['totalMentionCount'],
+            'totalNewActivity' => $notificationSegments['counts']['totalNewActivity'],
+            'totalNewComments' => $notificationSegments['counts']['totalNewComments'],
             'totalNewMentions' => $notificationSegments['counts']['totalNewMentions'],
             'totalNewNotifications' => $notificationSegments['counts']['totalNewNotifications'],
             'menuType' => $menuType,

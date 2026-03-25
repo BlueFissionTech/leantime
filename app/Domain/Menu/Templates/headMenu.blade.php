@@ -74,9 +74,15 @@
                 <a
                     href='javascript:void(0);'
                     class='notifcationTabs active'
-                    id="notificationsListLink"
-                    onclick="toggleNotificationTabs('notifications')"
-                >Notification ({{ $totalNewNotifications }})</a>
+                    id="activityListLink"
+                    onclick="toggleNotificationTabs('activity')"
+                >Activity ({{ $totalNewActivity }})</a>
+                <a
+                    href='javascript:void(0);'
+                    class='notifcationTabs'
+                    id="commentsListLink"
+                    onclick="toggleNotificationTabs('comments')"
+                >Comments ({{ $totalNewComments }})</a>
                 <a
                     href='javascript:void(0);'
                     class='notifcationTabs'
@@ -87,31 +93,26 @@
 
             <div class="scroll-wrapper">
 
-                <ul id='notificationsList' class='notifcationViewLists'>
-                    @if ($totalNotificationCount === 0)
+                <ul id='activityList' class='notifcationViewLists'>
+                    @if ($totalActivityCount === 0)
                         <p style='padding: 10px'>{{ __('text.no_notifications') }}</p>
                     @endif
 
-                    @if (count($commentNotifications) > 0)
-                        <li class="notificationSection">{{ __('label.notification_category_comments') }}</li>
-                        @foreach ($commentNotifications as $notif)
-                            @include('menu::partials.notificationListItem', ['notif' => $notif])
-                        @endforeach
+                    <li class="notificationSection">{{ __('label.notifications_all_activity') }}</li>
+                    @foreach ($activityNotifications as $notif)
+                        @include('menu::partials.notificationListItem', ['notif' => $notif])
+                    @endforeach
+                </ul>
+
+                <ul id='commentsList' style='display:none;' class='notifcationViewLists'>
+                    @if ($totalCommentCount === 0)
+                        <p style='padding: 10px'>{{ __('text.no_notifications') }}</p>
                     @endif
 
-                    @if (count($commentNotifications) > 0 && count($activityNotifications) > 0)
-                        <li class="notificationSectionDivider" aria-hidden="true"></li>
-                    @endif
-
-                    @if (count($activityNotifications) > 0)
-                        @if (count($commentNotifications) > 0)
-                            <li class="notificationSection">{{ __('label.notifications_all_activity') }}</li>
-                        @endif
-
-                        @foreach ($activityNotifications as $notif)
-                            @include('menu::partials.notificationListItem', ['notif' => $notif])
-                        @endforeach
-                    @endif
+                    <li class="notificationSection">{{ __('label.notification_category_comments') }}</li>
+                    @foreach ($commentNotifications as $notif)
+                        @include('menu::partials.notificationListItem', ['notif' => $notif])
+                    @endforeach
                 </ul>
 
                 <ul id='mentionsList' style='display:none;' class='notificationViewLists'>

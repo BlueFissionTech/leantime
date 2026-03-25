@@ -1026,6 +1026,8 @@ a.barmenu:hover {
     text-transform: uppercase;
     color: var(--primary-font-color);
     cursor: default;
+    background: color-mix(in srgb, var(--accent1) 8%, white);
+    border-radius: 8px;
 }
 
 .notificationDropdown .dropdown-menu li.notificationSection:hover,
@@ -1039,6 +1041,11 @@ a.barmenu:hover {
     margin: 6px 10px;
     min-height: 0;
     border-top: 1px solid var(--main-border-color);
+}
+
+.notificationDropdown .dropdownTabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
 }
 
 .notificationDropdown .notifcationTabs.active{

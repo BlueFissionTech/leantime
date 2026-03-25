@@ -17,7 +17,11 @@ class NotificationSegments
             'counts' => [
                 'unreadTotal' => 0,
                 'totalNotificationCount' => 0,
+                'totalActivityCount' => 0,
+                'totalCommentCount' => 0,
                 'totalMentionCount' => 0,
+                'totalNewActivity' => 0,
+                'totalNewComments' => 0,
                 'totalNewMentions' => 0,
                 'totalNewNotifications' => 0,
             ],
@@ -50,8 +54,18 @@ class NotificationSegments
 
             if (($notification['module'] ?? '') === 'comments') {
                 $segments['comments'][] = $notification;
+                $segments['counts']['totalCommentCount']++;
+
+                if ($isUnread) {
+                    $segments['counts']['totalNewComments']++;
+                }
             } else {
                 $segments['activity'][] = $notification;
+                $segments['counts']['totalActivityCount']++;
+
+                if ($isUnread) {
+                    $segments['counts']['totalNewActivity']++;
+                }
             }
         }
 
