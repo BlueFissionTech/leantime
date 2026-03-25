@@ -213,13 +213,15 @@ $allTickets = $group['items'];
                                         <?php if ($row['status'] == $key) {?>
                                         <?php
                                             $dueDateAlert = app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
+                                            $isBlocked = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class)
+                                                ->isTicketBlocked((int) $row['id'], $tpl->get('allTicketStates'));
                                             $dueDateClass = match ($dueDateAlert) {
                                                 'overdue' => 'ticket-due-date ticket-due-date--overdue',
                                                 'dueSoon' => 'ticket-due-date ticket-due-date--soon',
                                                 default => 'ticket-due-date',
                                             };
                                         ?>
-                                        <div class="ticketBox moveable container priority-border-<?= $row['priority']?>" id="ticket_<?php echo $row['id']; ?>">
+                                        <div class="ticketBox moveable container priority-border-<?= $row['priority']?>" id="ticket_<?php echo $row['id']; ?>" <?php if ($isBlocked) { ?>style="opacity:0.7; filter:grayscale(0.15);"<?php } ?>>
 
                                             <div class="row" >
 
@@ -239,6 +241,11 @@ $allTickets = $group['items'];
                                                     <small>#<?php echo $row['id']; ?></small>
                                                     <div class="kanbanCardContent">
                                                         <h4><a href="#/tickets/showTicket/<?php echo $row['id']; ?>" data-hx-get="<?= BASE_URL?>/tickets/showTicket/<?php echo $row['id']; ?>" hx-swap="none" preload="mouseover"><?php $tpl->e($row['headline']); ?></a></h4>
+                                                        <?php if ($isBlocked) { ?>
+                                                            <div class="tw-mt-xs">
+                                                                <span class="label label-important">Blocked</span>
+                                                            </div>
+                                                        <?php } ?>
 
                                                         <div class="kanbanContent" style="margin-bottom: 20px">
                                                             <?php echo $tpl->escapeMinimal($row['description']); ?>
