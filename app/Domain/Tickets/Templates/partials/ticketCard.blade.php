@@ -20,7 +20,9 @@
             @endif
             <strong><a href="#/tickets/showTicket/{{ $row['id'] }}" >{{ $row['headline'] }}</a></strong>
             @if($isBlocked)
-                <span class="label label-important" style="margin-left:6px;">Blocked</span>
+                <div class="tw-mt-xs">
+                    <span class="label label-important">Blocked</span>
+                </div>
             @endif
 
         </div>
