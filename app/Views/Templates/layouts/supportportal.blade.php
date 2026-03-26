@@ -158,7 +158,7 @@
         }
         .support-button.primary {
             background: {{ $primaryColor }};
-            color: #111 !important;
+            color: #f4f7fb !important;
         }
         .support-button.secondary {
             background: #fff;
