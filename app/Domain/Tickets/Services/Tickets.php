@@ -2237,7 +2237,7 @@ class Tickets
             return $this->patch($ticket->id, ['projectId' => $ticket->projectId, 'sprint' => '', 'dependingTicketId' => '', 'milestoneid' => '']);
         }
 
-        return false;
+        return $return;
     }
 
     /**
