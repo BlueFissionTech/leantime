@@ -389,11 +389,13 @@ class Tickets
         if ($includeCounts) {
             $query->selectRaw('COALESCE(comment_agg.comment_count, 0) AS '.$this->dbHelper->wrapColumn('commentCount'))
                 ->selectRaw('COALESCE(file_agg.file_count, 0) AS '.$this->dbHelper->wrapColumn('fileCount'))
-                ->selectRaw('COALESCE(subtask_agg.subtask_count, 0) AS '.$this->dbHelper->wrapColumn('subtaskCount'));
+                ->selectRaw('COALESCE(subtask_agg.subtask_count, 0) AS '.$this->dbHelper->wrapColumn('subtaskCount'))
+                ->selectRaw('COALESCE(subtask_agg.done_subtask_count, 0) AS '.$this->dbHelper->wrapColumn('doneSubtaskCount'));
         } else {
             $query->selectRaw('0 AS '.$this->dbHelper->wrapColumn('commentCount'))
                 ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('fileCount'))
-                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('subtaskCount'));
+                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('subtaskCount'))
+                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('doneSubtaskCount'));
         }
 
         $query->leftJoin('zp_projects', 'zp_tickets.projectId', '=', 'zp_projects.id')
@@ -450,6 +452,7 @@ class Tickets
                     $this->connection->table('zp_tickets')
                         ->select('dependingTicketId')
                         ->selectRaw('COUNT(*) as subtask_count')
+                        ->selectRaw('SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as done_subtask_count')
                         ->where('dependingTicketId', '>', 0)
                         ->groupBy('dependingTicketId'),
                     'subtask_agg',
@@ -622,6 +625,7 @@ class Tickets
             $groupByColumns[] = 'comment_agg.comment_count';
             $groupByColumns[] = 'file_agg.file_count';
             $groupByColumns[] = 'subtask_agg.subtask_count';
+            $groupByColumns[] = 'subtask_agg.done_subtask_count';
         }
 
         $query->groupBy($groupByColumns);

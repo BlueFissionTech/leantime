@@ -26,6 +26,7 @@ use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as Ticketdepe
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
+use Leantime\Domain\Tickets\Support\SubtaskProgress;
 use Leantime\Domain\Timesheets\Repositories\Timesheets as TimesheetRepository;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 
@@ -1773,9 +1774,42 @@ class Tickets
      */
     public function getAllSubtasks(int $ticketId): false|array
     {
+        $subtasks = $this->ticketRepository->getAllSubtasks($ticketId);
 
-        // TODO: Refactor to be recursive
-        return $this->ticketRepository->getAllSubtasks($ticketId);
+        if ($subtasks === false) {
+            return false;
+        }
+
+        return SubtaskProgress::sortByDueDate($subtasks);
+    }
+
+    /**
+     * @return array{completed: int, total: int}
+     */
+    public function getSubtaskSummary(int $ticketId): array
+    {
+        $subtasks = $this->getAllSubtasks($ticketId);
+
+        return SubtaskProgress::summarize(is_array($subtasks) ? $subtasks : []);
+    }
+
+    public function syncParentCompletionFromSubtasks(int $parentTicketId): void
+    {
+        $parentTicket = $this->getTicket($parentTicketId);
+        if (! $parentTicket) {
+            return;
+        }
+
+        $subtasks = $this->getAllSubtasks($parentTicketId);
+        if (! is_array($subtasks) || ! SubtaskProgress::areAllComplete($subtasks)) {
+            return;
+        }
+
+        if ((string) $parentTicket->status === '0') {
+            return;
+        }
+
+        $this->ticketRepository->updateTicketStatus($parentTicketId, 0);
     }
 
     /**
@@ -2059,13 +2093,12 @@ class Tickets
      */
     public function updateTicket($values): array|bool
     {
+        $currentTicket = $this->getTicket($values['id']);
+        if (! $currentTicket) {
+            return ['msg' => 'This ticket id does not exist within your leantime account.', 'type' => 'error'];
+        }
+
         if (! isset($values['headline'])) {
-            $currentTicket = $this->getTicket($values['id']);
-
-            if (! $currentTicket) {
-                return ['msg' => 'This ticket id does not exist within your leantime account.', 'type' => 'error'];
-            }
-
             $values['headline'] = $currentTicket->headline;
         }
 
@@ -2167,6 +2200,11 @@ class Tickets
             $this->projectService->notifyProjectUsers($notification);
 
             self::dispatchEvent('ticket_updated');
+
+            $parentTicketId = (int) ($values['dependingTicketId'] ?: $currentTicket->dependingTicketId ?: 0);
+            if ($parentTicketId > 0) {
+                $this->syncParentCompletionFromSubtasks($parentTicketId);
+            }
 
             return true;
         }
@@ -2364,6 +2402,8 @@ class Tickets
 
             self::dispatchEvent('ticket_updated');
         }
+
+        $this->syncParentCompletionFromSubtasks((int) $parentTicket->id);
 
         return true;
     }
