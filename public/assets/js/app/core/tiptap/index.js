@@ -8,7 +8,7 @@
  */
 
 // Use require for Node/Webpack compatibility
-const { Editor } = require('@tiptap/core');
+const { Editor, Extension } = require('@tiptap/core');
 const StarterKit = require('@tiptap/starter-kit').default;
 const Placeholder = require('@tiptap/extension-placeholder').default;
 const Link = require('@tiptap/extension-link').default;
@@ -194,6 +194,22 @@ var defaultOptions = {
     onFocus: null,
     onCreate: null,
 };
+
+var simpleCommentSpacingExtension = Extension.create({
+    name: 'simpleCommentSpacing',
+
+    addKeyboardShortcuts() {
+        return {
+            Enter: () => this.editor.commands.first(({ commands }) => [
+                () => commands.newlineInCode(),
+                () => commands.createParagraphNear(),
+                () => commands.liftEmptyBlock(),
+                () => commands.splitBlock(),
+            ]),
+            'Shift-Enter': () => this.editor.commands.setHardBreak(),
+        };
+    },
+});
 
 /**
  * Create a Tiptap editor instance
@@ -391,6 +407,10 @@ function createTiptapEditor(elementOrSelector, options) {
             TableCell,
             TableHeader
         );
+    }
+
+    if (options.toolbar === 'simple') {
+        extensions.push(simpleCommentSpacingExtension);
     }
 
     // Create editor
