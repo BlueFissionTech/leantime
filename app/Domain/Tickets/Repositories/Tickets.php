@@ -81,15 +81,17 @@ class Tickets
     private function getDueDateSortExpression(): string
     {
         $column = $this->dbHelper->wrapColumn('zp_tickets.dateToFinish');
+        $columnText = $this->dbHelper->castAs($column, 'text');
 
-        return "CASE WHEN {$column} IS NULL OR {$column} = '' OR {$column} = '0000-00-00 00:00:00' OR {$column} = '1969-12-31 00:00:00' THEN 1 ELSE 0 END";
+        return "CASE WHEN {$column} IS NULL OR {$columnText} = '' OR {$columnText} = '0000-00-00 00:00:00' OR {$columnText} = '1969-12-31 00:00:00' THEN 1 ELSE 0 END";
     }
 
     private function getSafeDateFormatExpression(string $column, string $format): string
     {
         $formatted = $this->dbHelper->formatDate($column, $format);
+        $columnText = $this->dbHelper->castAs($column, 'text');
 
-        return "CASE WHEN {$column} IS NULL OR {$column} = '' OR {$column} = '0000-00-00' OR {$column} = '0000-00-00 00:00:00' OR {$column} = '1969-12-31' OR {$column} = '1969-12-31 00:00:00' THEN NULL ELSE {$formatted} END";
+        return "CASE WHEN {$column} IS NULL OR {$columnText} = '' OR {$columnText} = '0000-00-00' OR {$columnText} = '0000-00-00 00:00:00' OR {$columnText} = '1969-12-31' OR {$columnText} = '1969-12-31 00:00:00' THEN NULL ELSE {$formatted} END";
     }
 
     public array $type = ['task', 'subtask', 'story', 'bug'];
@@ -791,9 +793,14 @@ class Tickets
             $query->where('zp_tickets.editorId', (string) $userId);
         }
 
-        $query->where(function ($q) use ($dateFrom, $dateTo) {
-            $q->whereBetween('zp_tickets.editFrom', [$dateFrom->formatDateTimeForDb(), $dateTo->formatDateTimeForDb()])
-                ->orWhereBetween('zp_tickets.editTo', [$dateFrom->formatDateTimeForDb(), $dateTo->formatDateTimeForDb()]);
+        $editFromText = $this->dbHelper->castAs($this->dbHelper->wrapColumn('zp_tickets.editFrom'), 'text');
+        $editToText = $this->dbHelper->castAs($this->dbHelper->wrapColumn('zp_tickets.editTo'), 'text');
+        $fromValue = $dateFrom->formatDateTimeForDb();
+        $toValue = $dateTo->formatDateTimeForDb();
+
+        $query->where(function ($q) use ($editFromText, $editToText, $fromValue, $toValue) {
+            $q->whereRaw("({$editFromText} <> '' AND {$editFromText} <> '0000-00-00 00:00:00' AND {$editFromText} <> '1969-12-31 00:00:00' AND {$editFromText} BETWEEN ? AND ?)", [$fromValue, $toValue])
+                ->orWhereRaw("({$editToText} <> '' AND {$editToText} <> '0000-00-00 00:00:00' AND {$editToText} <> '1969-12-31 00:00:00' AND {$editToText} BETWEEN ? AND ?)", [$fromValue, $toValue]);
         });
 
         $results = $query->get();
