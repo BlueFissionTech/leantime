@@ -12,9 +12,10 @@ class TicketsSafeDateFormatSourceTest extends TestCase
 
         $this->assertIsString($source);
         $this->assertStringContainsString('private function getSafeDateFormatExpression(string $column, string $format): string', $source);
-        $this->assertStringContainsString('{$column} = \'\'', $source);
-        $this->assertStringContainsString('{$column} = \'0000-00-00 00:00:00\'', $source);
-        $this->assertStringContainsString('{$column} = \'1969-12-31 00:00:00\'', $source);
+        $this->assertStringContainsString("\$columnText = \$this->dbHelper->castAs(\$column, 'text');", $source);
+        $this->assertStringContainsString('{$columnText} = \'\'', $source);
+        $this->assertStringContainsString('{$columnText} = \'0000-00-00 00:00:00\'', $source);
+        $this->assertStringContainsString('{$columnText} = \'1969-12-31 00:00:00\'', $source);
         $this->assertGreaterThanOrEqual(
             4,
             substr_count($source, 'getSafeDateFormatExpression('),
