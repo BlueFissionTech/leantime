@@ -20,7 +20,7 @@ if (! is_array($searchCriteria)) {
 <form action="" method="get" id="ticketSearch">
 
     <input type="hidden" value="1" name="search"/>
-    <input type="hidden" value="<?php echo session('currentProject'); ?>" name="projectId" id="projectIdInput"/>
+    <input type="hidden" value="<?php echo $searchCriteria['currentProject'] === '' ? 'all' : $searchCriteria['currentProject']; ?>" name="projectId" id="projectIdInput"/>
 
     <div class="filterWrapper" style="display:inline-block; position:relative; vertical-align: bottom; margin-bottom:20px;">
         <a onclick="leantime.ticketsController.toggleFilterBar();" style="margin-right:5px;"
@@ -68,6 +68,21 @@ if (! is_array($searchCriteria)) {
                 <?php $tpl->dispatchTplEvent('filters.beforeFirstBarField'); ?>
 
                 <div class="">
+                    <label class="inline"><?= $tpl->__('label.project') ?></label>
+                    <div class="form-group">
+                        <select id="projectScopeSelect" class="form-control">
+                            <option value="<?php echo $searchCriteria['currentProject'] === '' ? 'current' : $searchCriteria['currentProject']; ?>" <?= $searchCriteria['currentProject'] !== '' ? "selected='selected'" : '' ?>>
+                                Current project
+                            </option>
+                            <option value="all" <?= $searchCriteria['currentProject'] === '' ? "selected='selected'" : '' ?>>
+                                All accessible projects
+                            </option>
+                        </select>
+                        <p class="small muted" style="margin-top:6px;">Cross-project search clears project-specific milestone and sprint filters.</p>
+                    </div>
+                </div>
+
+                <div class="">
                     <label class="inline"><?= $tpl->__('label.user') ?></label>
                     <div class="form-group">
                         <select data-placeholder="<?= $tpl->__('input.placeholders.filter_by_user') ?>"  title="<?= $tpl->__('input.placeholders.filter_by_user') ?>" name="users" multiple="multiple" class="user-select" id="userSelect">
@@ -96,11 +111,16 @@ if (! is_array($searchCriteria)) {
                                 foreach ($tpl->get('milestones') as $milestoneRow) {   ?>
                                     <?php echo "<option value='".$milestoneRow->id."'";
 
-                                    if (isset($searchCriteria['milestone']) && ($searchCriteria['milestone'] == $milestoneRow->id) && array_search($milestoneRow->id, explode(',', $searchCriteria['milestone'])) !== false) {
+                                    if (isset($searchCriteria['milestone']) && array_search((string) $milestoneRow->id, explode(',', $searchCriteria['milestone']), true) !== false) {
                                         echo " selected='selected' ";
                                     }
 
-                                    echo '>'.$tpl->escape($milestoneRow->headline).'</option>'; ?>
+                                    $milestoneLabel = $tpl->escape($milestoneRow->headline);
+                                    if ($searchCriteria['currentProject'] === '' && isset($milestoneRow->projectName) && $milestoneRow->projectName !== '') {
+                                        $milestoneLabel = $tpl->escape($milestoneRow->projectName).' / '.$milestoneLabel;
+                                    }
+
+                                    echo '>'.$milestoneLabel.'</option>'; ?>
 
                                 <?php }
                                 }?>
@@ -178,7 +198,7 @@ if (! is_array($searchCriteria)) {
                         <input type="text" name="termInput" id="termInput"
                         style="width: 230px"
                         value="<?= $searchCriteria['term']?>"
-                        placeholder="<?= $tpl->__('label.search_term')?>">
+                        placeholder="Tasks, people, projects, milestones">
                     </div>
                 </div>
 
@@ -245,6 +265,14 @@ if (! is_array($searchCriteria)) {
                 placeholderText: 'All Statuses',
             },
         });
+
+        jQuery('#projectScopeSelect').on('change', function () {
+            var selectedProjectScope = jQuery(this).val();
+            var useAllProjects = selectedProjectScope === 'all';
+            jQuery('#projectIdInput').val(useAllProjects ? 'all' : selectedProjectScope);
+            jQuery('#milestoneSelect').prop('disabled', useAllProjects);
+            jQuery('#sprintSelect').prop('disabled', useAllProjects);
+        }).trigger('change');
 
         leantime.ticketsController.initTicketSearchSubmit('<?= $currentUrlPath; ?>');
 
