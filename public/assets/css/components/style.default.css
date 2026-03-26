@@ -2171,6 +2171,14 @@ body .widgettitle .editHeadline:hover {
     margin: 0;
 }
 
+.commentContent .tiptap-content p {
+    margin: 0 0 1em 0;
+}
+
+.commentContent .tiptap-content p:last-child {
+    margin-bottom: 0;
+}
+
 .ticket-due-date {
     font-weight: 600;
 }
