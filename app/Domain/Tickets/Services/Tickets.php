@@ -26,6 +26,7 @@ use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as Ticketdepe
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
+use Leantime\Domain\Tickets\Support\HighImpactTicketRanker;
 use Leantime\Domain\Tickets\Support\SubtaskProgress;
 use Leantime\Domain\Timesheets\Repositories\Timesheets as TimesheetRepository;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
@@ -3227,6 +3228,48 @@ class Tickets
             ),
             'projectFilter' => $projectFilter,
             'groupBy' => $groupBy,
+        ];
+    }
+
+    public function getHighImpactNextAssignments(array $params = []): array
+    {
+        $projectFilter = '';
+        if (session()->exists('userHomeProjectFilter')) {
+            $projectFilter = session('userHomeProjectFilter');
+        }
+
+        if (isset($params['projectFilter'])) {
+            $projectFilter = $params['projectFilter'] !== 'all' ? $params['projectFilter'] : '';
+        }
+
+        $limit = isset($params['limit']) ? max(1, (int) $params['limit']) : 8;
+
+        $searchCriteria = $this->prepareTicketSearchArray([
+            'currentProject' => $projectFilter,
+            'currentUser' => session('userdata.id'),
+            'users' => session('userdata.id'),
+            'status' => 'not_done',
+            'sprint' => '',
+        ]);
+
+        $tickets = $this->ticketRepository->getAllBySearchCriteria(
+            searchCriteria: $searchCriteria,
+            sort: 'duedate',
+            limit: 100,
+            includeCounts: false,
+            offset: 0
+        );
+
+        $ranker = new HighImpactTicketRanker();
+        $rankedTickets = $ranker->rank($tickets, $limit, dtHelper()->userNow()->setToDbTimezone());
+
+        return [
+            'tickets' => $rankedTickets,
+            'projectFilter' => $projectFilter,
+            'totalCandidates' => count($tickets),
+            'focusCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['focus'] ?? false))),
+            'expectedCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['expected'] ?? false))),
+            'provisionedCount' => count(array_filter($rankedTickets, fn (array $ticket) => ! empty($ticket['highImpact']['provisionRef'] ?? null))),
         ];
     }
 
