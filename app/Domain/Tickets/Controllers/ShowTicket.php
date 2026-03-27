@@ -10,6 +10,7 @@ use Leantime\Core\Support\FromFormat;
 use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Raci\Services\RaciAssignments;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
 use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Supportcenter\Services\GithubElevation;
@@ -38,6 +39,7 @@ class ShowTicket extends Controller
 
     private TicketdependencyService $ticketdependencyService;
     private GithubElevation $githubElevation;
+    private RaciAssignments $raciAssignments;
 
     public function init(
         ProjectService $projectService,
@@ -48,7 +50,8 @@ class ShowTicket extends Controller
         TimesheetService $timesheetService,
         UserService $userService,
         TicketdependencyService $ticketdependencyService,
-        GithubElevation $githubElevation
+        GithubElevation $githubElevation,
+        RaciAssignments $raciAssignments
     ): void {
         $this->projectService = $projectService;
         $this->ticketService = $ticketService;
@@ -59,6 +62,7 @@ class ShowTicket extends Controller
         $this->userService = $userService;
         $this->ticketdependencyService = $ticketdependencyService;
         $this->githubElevation = $githubElevation;
+        $this->raciAssignments = $raciAssignments;
 
         if (session()->exists('lastPage') === false) {
             session(['lastPage' => BASE_URL.'/tickets/showKanban']);
@@ -263,7 +267,13 @@ class ShowTicket extends Controller
         $this->tpl->assign('remainingHours', $this->timesheetService->getRemainingHours($ticket));
 
         $this->tpl->assign('userInfo', $this->userService->getUser(session('userdata.id')));
-        $this->tpl->assign('users', $this->projectService->getUsersAssignedToProject($ticket->projectId));
+        $projectUsers = $this->projectService->getUsersAssignedToProject($ticket->projectId);
+        $this->tpl->assign('users', $projectUsers);
+        $this->tpl->assign('ticketRaci', $this->raciAssignments->getTicketAssignments($id));
+        $this->tpl->assign('resolvedTicketRaci', $this->raciAssignments->toDisplayAssignments(
+            $this->raciAssignments->resolveForTicket($ticket),
+            $projectUsers
+        ));
 
         $projectData = $this->projectService->getProject($ticket->projectId);
         $this->tpl->assign('projectData', $projectData);

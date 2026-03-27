@@ -8,7 +8,16 @@ $statusLabels = $tpl->get('statusLabels');
 $ticketTypes = $tpl->get('ticketTypes');
 $dependencyTicketIds = $tpl->get('dependencyTicketIds') ?? [];
 $dependencyTickets = $tpl->get('dependencyTickets') ?? [];
+$ticketRaci = $tpl->get('ticketRaci') ?? [];
+$resolvedTicketRaci = $tpl->get('resolvedTicketRaci') ?? [];
 $dependencyScheduleMap = [];
+$raciSourceLabels = [
+    'task' => 'This task',
+    'parent_task' => 'Parent task',
+    'milestone' => 'Milestone',
+    'project' => 'Project',
+    'none' => 'Not set',
+];
 
 foreach ($dependencyTickets as $dependencyTicket) {
     $dependencyId = (int) ($dependencyTicket['id'] ?? 0);
@@ -138,6 +147,47 @@ foreach ($dependencyTickets as $dependencyTicket) {
                             <?php } ?>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <h5 class="widgettitle title-light" style="margin: 20px 0 10px 0;">
+                        <i class="fa fa-users"></i> RACI Assignments
+                    </h5>
+                    <div class="small muted" style="margin-bottom:10px;">
+                        Leave task fields empty to inherit from milestone or project. Subtasks inherit from their parent task before milestone/project defaults.
+                    </div>
+
+                    <?php foreach ([
+                        'Responsible' => 'responsible',
+                        'Accountable' => 'accountable',
+                        'Consulted' => 'consulted',
+                        'Informed' => 'informed',
+                    ] as $roleLabel => $roleKey) { ?>
+                        <div class="form-group tw-flex tw-w-3/5">
+                            <label class="control-label tw-mx-m tw-w-[100px]"><?php echo $roleLabel; ?></label>
+                            <div class="" style="min-width: 220px;">
+                                <select name="raci<?php echo $roleLabel; ?>[]" class="user-select tw-mr-sm" multiple style="width: 220px;">
+                                    <?php foreach ($tpl->get('users') as $userRow) { ?>
+                                        <option value="<?php echo $userRow['id']; ?>"
+                                            <?php if (in_array((int) $userRow['id'], array_map('intval', (array) ($ticketRaci[$roleKey] ?? [])), true)) {
+                                                echo "selected='selected'";
+                                            } ?>
+                                        >
+                                            <?php echo $tpl->escape($userRow['firstname'].' '.$userRow['lastname']); ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                                <?php $effectiveRole = $resolvedTicketRaci[$roleKey] ?? ['names' => [], 'source' => 'none']; ?>
+                                <div class="small muted" style="margin-top:4px;">
+                                    Effective:
+                                    <?php echo ! empty($effectiveRole['names']) ? $tpl->escape(implode(', ', $effectiveRole['names'])) : 'None'; ?>
+                                    <span>
+                                        (<?php echo $tpl->escape($raciSourceLabels[$effectiveRole['source'] ?? 'none'] ?? 'Not set'); ?>)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    <?php } ?>
                 </div>
 
                 <!-- Due Date -->
