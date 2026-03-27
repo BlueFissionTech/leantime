@@ -15,21 +15,21 @@
      hx-swap="outerHTML"
      class="tw-flex tw-flex-col tw-gap-m">
 
-    <div class="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-sm tw-rounded-xl tw-border tw-border-gray-200 tw-bg-slate-50 tw-p-m">
+    <div class="tw-rounded-xl tw-border tw-border-gray-200 tw-bg-slate-50 tw-p-m">
         <div class="subtitle tw-mb-xs">{{ __('headlines.high_impact_next') }}</div>
-        <div class="tw-flex tw-flex-wrap tw-gap-xs tw-text-xs">
-            <span class="label">{{ $totalCandidates }} Tasks</span>
+        <div class="tw-text-xs tw-leading-7">
+            <span class="label tw-inline-block tw-mr-xs tw-mb-xs">{{ $totalCandidates }} Tasks</span>
             @if($focusCount > 0)
-                <span class="label label-info">Focus {{ $focusCount }}</span>
+                <span class="label label-info tw-inline-block tw-mr-xs tw-mb-xs">Focus {{ $focusCount }}</span>
             @endif
             @if($expectedCount > 0)
-                <span class="label label-warning">Expected {{ $expectedCount }}</span>
+                <span class="label label-warning tw-inline-block tw-mr-xs tw-mb-xs">Expected {{ $expectedCount }}</span>
             @endif
             @if($assessmentCount > 0)
-                <span class="label">Assessment {{ $assessmentCount }}</span>
+                <span class="label tw-inline-block tw-mr-xs tw-mb-xs">Assessment {{ $assessmentCount }}</span>
             @endif
             @if($provisionedCount > 0)
-                <span class="label label-success">Provisioned {{ $provisionedCount }}</span>
+                <span class="label label-success tw-inline-block tw-mr-xs tw-mb-xs">Provisioned {{ $provisionedCount }}</span>
             @endif
         </div>
     </div>
@@ -44,24 +44,24 @@
         @php($highImpact = $ticket['highImpact'] ?? [])
         <a href="{{ BASE_URL }}/tickets/showTicket/{{ $ticket['id'] }}"
            class="projectBox tw-block tw-rounded-xl tw-border tw-border-gray-200 tw-bg-white tw-p-m tw-no-underline hover:tw-no-underline">
-            <div class="tw-flex tw-items-start tw-justify-between tw-gap-sm">
+            <div class="tw-grid tw-grid-cols-[minmax(0,1fr)_auto] tw-gap-sm">
                 <div class="tw-min-w-0 tw-flex-1">
-                    <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-xs tw-mb-xs tw-max-w-full">
-                        <span class="label label-default">#{{ $ticket['id'] }}</span>
+                    <div class="tw-mb-xs tw-leading-7">
+                        <span class="label label-default tw-inline-block tw-mr-xs tw-mb-xs">#{{ $ticket['id'] }}</span>
                         @if(($highImpact['focus'] ?? false) === true)
-                            <span class="label label-info">Focus</span>
+                            <span class="label label-info tw-inline-block tw-mr-xs tw-mb-xs">Focus</span>
                         @endif
                         @if(($highImpact['expected'] ?? false) === true)
-                            <span class="label label-warning">Expected</span>
+                            <span class="label label-warning tw-inline-block tw-mr-xs tw-mb-xs">Expected</span>
                         @endif
                         @if(($highImpact['assessment'] ?? false) === true)
-                            <span class="label">Assessment</span>
+                            <span class="label tw-inline-block tw-mr-xs tw-mb-xs">Assessment</span>
                         @endif
                         @if(!empty($highImpact['impactLabel']))
-                            <span class="label label-important">Impact: {{ ucfirst($highImpact['impactLabel']) }}</span>
+                            <span class="label label-important tw-inline-block tw-mr-xs tw-mb-xs">Impact: {{ ucfirst($highImpact['impactLabel']) }}</span>
                         @endif
                         @if(!empty($highImpact['provisionRef']))
-                            <span class="label label-success tw-whitespace-normal tw-break-all tw-max-w-full">{{ $highImpact['provisionRef'] === 'provisioned' ? 'Provisioned' : 'Provision: '.$highImpact['provisionRef'] }}</span>
+                            <span class="label label-success tw-inline-block tw-mr-xs tw-mb-xs tw-whitespace-normal tw-break-all tw-align-top">{{ $highImpact['provisionRef'] === 'provisioned' ? 'Provisioned' : 'Provision: '.$highImpact['provisionRef'] }}</span>
                         @endif
                     </div>
                     <div class="tw-font-semibold tw-text-slate-900 tw-break-words">{{ $ticket['headline'] }}</div>
