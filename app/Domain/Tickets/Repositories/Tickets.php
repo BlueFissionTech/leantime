@@ -78,6 +78,13 @@ class Tickets
 
     public array $efforts = ['0.5' => '< 2min', '1' => 'XS', '2' => 'S', '3' => 'M', '5' => 'L', '8' => 'XL', '13' => 'XXL'];
 
+    private function getDueDateSortExpression(): string
+    {
+        $column = $this->dbHelper->wrapColumn('zp_tickets.dateToFinish');
+
+        return "CASE WHEN {$column} IS NULL OR {$column} = '' OR {$column} = '0000-00-00 00:00:00' OR {$column} = '1969-12-31 00:00:00' THEN 1 ELSE 0 END";
+    }
+
     public array $type = ['task', 'subtask', 'story', 'bug'];
 
     public array $typeIcons = ['story' => 'fa-book', 'task' => 'fa-check-square', 'subtask' => 'fa-diagram-successor', 'bug' => 'fa-bug'];
@@ -604,7 +611,7 @@ class Tickets
             $query->orderBy('zp_tickets.kanbanSortIndex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
         } elseif ($sort == 'duedate') {
-            $query->orderByRaw('('.$this->dbHelper->wrapColumn('zp_tickets.dateToFinish').' IS NULL)')
+            $query->orderByRaw($this->getDueDateSortExpression())
                 ->orderBy('zp_tickets.dateToFinish', 'ASC')
                 ->orderBy('zp_tickets.sortindex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
@@ -1233,7 +1240,7 @@ class Tickets
             $query->orderBy('zp_tickets.kanbanSortIndex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
         } elseif ($sort == 'duedate') {
-            $query->orderByRaw('('.$this->dbHelper->wrapColumn('zp_tickets.dateToFinish').' IS NULL)')
+            $query->orderByRaw($this->getDueDateSortExpression())
                 ->orderBy('zp_tickets.dateToFinish', 'ASC')
                 ->orderBy('zp_tickets.sortindex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
