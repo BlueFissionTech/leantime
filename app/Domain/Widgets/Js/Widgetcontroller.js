@@ -83,11 +83,30 @@ leantime.widgetController = (function () {
     };
 
     var saveGrid = function() {
-        let items = grid.save();
+        let items = (grid.engine && Array.isArray(grid.engine.nodes)) ? grid.engine.nodes.map(function(node) {
+            let widgetElement = jQuery(node.el).find("[hx-get]").first();
+
+            return {
+                id: widgetElement.attr("id"),
+                widgetUrl: widgetElement.attr("hx-get"),
+                widgetTrigger: widgetElement.attr("hx-trigger"),
+                gridX: node.x ?? 0,
+                gridY: node.y ?? 0,
+                gridWidth: node.w ?? 1,
+                gridHeight: node.h ?? 1,
+                x: node.x ?? 0,
+                y: node.y ?? 0,
+                w: node.w ?? 1,
+                h: node.h ?? 1,
+                content: ''
+            };
+        }).filter(function(item) {
+            return typeof item.id !== "undefined" && item.id !== "";
+        }) : [];
 
         // Sort items by Y position first, then X position
         items.sort((a, b) => {
-            return a.y === b.y ? a.x - b.x : a.y - b.y;
+            return a.gridY === b.gridY ? a.gridX - b.gridX : a.gridY - b.gridY;
         });
 
         let visibilityData = null;
@@ -98,38 +117,6 @@ leantime.widgetController = (function () {
                 visible: arguments[0].visible
             };
         }
-
-        items.forEach(function(item) {
-            //get hx links
-            let htmxElement = jQuery(item.content).find("[hx-get]").first();
-
-            item.id = htmxElement.attr("id");
-            item.widgetUrl = htmxElement.attr("hx-get");
-            item.widgetTrigger = htmxElement.attr("hx-trigger");
-
-            if(item.x == undefined) {
-                item.x = 0;
-            }
-            item.gridX = item.x;
-
-            if(item.y == undefined) {
-                item.y = 0;
-            }
-            item.gridY = item.y;
-
-            if(item.w == undefined) {
-                item.w = 1;
-            }
-            item.gridWidth = item.w;
-
-            if(item.h == undefined) {
-                item.h = 1;
-            }
-            item.gridHeight = item.h;
-
-            item.content = '';
-        });
-
 
         jQuery.post(leantime.appUrl+"/widgets/widgetManager",
             {
@@ -181,8 +168,8 @@ leantime.widgetController = (function () {
             // Add to grid and make it a widget
             grid.el.appendChild(widgetNode);
             grid.makeWidget(widgetNode, {
-                x: widget.gridX || 0,
-                y: widget.gridY || 50,
+                x: position.x,
+                y: position.y,
                 w: widget.gridWidth || 2,
                 h: widget.gridHeight || 2
             });
