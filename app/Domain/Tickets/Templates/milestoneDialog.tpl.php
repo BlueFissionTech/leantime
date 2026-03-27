@@ -5,6 +5,13 @@ foreach ($__data as $var => $val) {
 $currentMilestone = $tpl->get('milestone');
 $milestones = $tpl->get('milestones');
 $statusLabels = $tpl->get('statusLabels');
+$milestoneRaci = $tpl->get('milestoneRaci') ?? [];
+$resolvedMilestoneRaci = $tpl->get('resolvedMilestoneRaci') ?? [];
+$raciSourceLabels = [
+    'milestone' => 'This milestone',
+    'project' => 'Project',
+    'none' => 'Not set',
+];
 ?>
 
 <script type="text/javascript">
@@ -98,6 +105,34 @@ $statusLabels = $tpl->get('statusLabels');
 
         <?php } ?>
     </select>
+
+    <label style="margin-top: 15px;">RACI Assignments</label>
+    <div class="small muted" style="margin-bottom:8px;">Leave milestone fields empty to inherit from the project.</div>
+    <?php foreach ([
+        'Responsible' => 'responsible',
+        'Accountable' => 'accountable',
+        'Consulted' => 'consulted',
+        'Informed' => 'informed',
+    ] as $roleLabel => $roleKey) { ?>
+        <label><?= $roleLabel ?></label>
+        <select name="raci<?= $roleLabel ?>[]" class="user-select span11" multiple>
+            <?php foreach ($tpl->get('users') as $userRow) { ?>
+                <option value="<?php echo $userRow['id']; ?>"
+                    <?php if (in_array((int) $userRow['id'], array_map('intval', (array) ($milestoneRaci[$roleKey] ?? [])), true)) {
+                        echo " selected='selected' ";
+                    } ?>
+                >
+                    <?php echo $tpl->escape($userRow['firstname']).' '.$tpl->escape($userRow['lastname']); ?>
+                </option>
+            <?php } ?>
+        </select>
+        <?php $effectiveRole = $resolvedMilestoneRaci[$roleKey] ?? ['names' => [], 'source' => 'none']; ?>
+        <div class="small muted" style="margin: 4px 0 8px 0;">
+            Effective:
+            <?php echo ! empty($effectiveRole['names']) ? $tpl->escape(implode(', ', $effectiveRole['names'])) : 'None'; ?>
+            (<?php echo $tpl->escape($raciSourceLabels[$effectiveRole['source'] ?? 'none'] ?? 'Not set'); ?>)
+        </div>
+    <?php } ?>
 
     <label><?= $tpl->__('label.color'); ?></label>
     <input type="text" name="tags" autocomplete="off" value="<?php echo $currentMilestone->tags?>" placeholder="<?= $tpl->__('input.placeholders.pick_a_color'); ?>" class="simpleColorPicker"/><br />

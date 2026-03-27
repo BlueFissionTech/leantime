@@ -9,6 +9,7 @@ foreach ($__data as $var => $val) {
 }
 $project = $tpl->get('project');
 $menuTypes = $tpl->get('menuTypes');
+$projectRaci = $tpl->get('projectRaci') ?? [];
 
 ?>
 
@@ -159,6 +160,35 @@ $menuTypes = $tpl->get('menuTypes');
                 </div>
 
 
+
+            <div class="row marginBottom" style="margin-bottom: 30px;">
+                <div class="col-md-12 ">
+                    <h4 class="widgettitle title-light"><span class="fa fa-users"></span> RACI Defaults</h4>
+                    <div class="small muted" style="margin-bottom:10px;">These assignments are the fallback for milestones and tasks that do not define their own RACI roles.</div>
+
+                    <?php foreach ([
+                        'Responsible' => 'responsible',
+                        'Accountable' => 'accountable',
+                        'Consulted' => 'consulted',
+                        'Informed' => 'informed',
+                    ] as $roleLabel => $roleKey) { ?>
+                        <div class="form-group">
+                            <label class="control-label"><?php echo $roleLabel; ?></label>
+                            <select name="raci<?php echo $roleLabel; ?>[]" class="user-select span11" multiple>
+                                <?php foreach (($project['assignedUsers'] ?? []) as $userRow) { ?>
+                                    <option value="<?php echo $userRow['id']; ?>"
+                                        <?php if (in_array((int) $userRow['id'], array_map('intval', (array) ($projectRaci[$roleKey] ?? [])), true)) {
+                                            echo " selected='selected' ";
+                                        } ?>
+                                    >
+                                        <?php echo $tpl->escape($userRow['firstname'].' '.$userRow['lastname']); ?>
+                                    </option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
 
             <div class="row marginBottom" style="margin-bottom: 30px;">
                 <div class="col-md-12">
