@@ -27,9 +27,11 @@ class HighImpactTicketRanker
                 'score' => $score,
                 'focus' => $signals['focus'],
                 'expected' => $signals['expected'],
+                'assessment' => $signals['assessment'],
                 'impactLabel' => $signals['impactLabel'],
                 'impactWeight' => $signals['impactWeight'],
                 'provisionRef' => $signals['provisionRef'],
+                'focusNote' => $signals['focusNote'],
                 'dueState' => $dueState,
             ];
 
@@ -65,9 +67,11 @@ class HighImpactTicketRanker
         $signals = [
             'focus' => false,
             'expected' => false,
+            'assessment' => false,
             'impactLabel' => null,
             'impactWeight' => 0,
             'provisionRef' => null,
+            'focusNote' => null,
         ];
 
         foreach ($this->tokenizeTags($tags) as $token) {
@@ -84,6 +88,11 @@ class HighImpactTicketRanker
                 continue;
             }
 
+            if (in_array($key, ['assessment', 'assessment_flag'], true)) {
+                $signals['assessment'] = $this->isTruthyTagValue($value);
+                continue;
+            }
+
             if (in_array($key, ['impact', 'impact_tier'], true) && $value !== null && $value !== '') {
                 $signals['impactLabel'] = $value;
                 $signals['impactWeight'] = $this->resolveImpactWeight($value);
@@ -95,10 +104,17 @@ class HighImpactTicketRanker
                 continue;
             }
 
+            if (in_array($key, ['focus_note', 'focusnote'], true) && $value !== null && $value !== '') {
+                $signals['focusNote'] = $value;
+                continue;
+            }
+
             if ($lowerToken === 'focus') {
                 $signals['focus'] = true;
             } elseif ($lowerToken === 'expected') {
                 $signals['expected'] = true;
+            } elseif ($lowerToken === 'assessment') {
+                $signals['assessment'] = true;
             } elseif ($lowerToken === 'provisioned') {
                 $signals['provisionRef'] = 'provisioned';
             }
@@ -117,6 +133,10 @@ class HighImpactTicketRanker
 
         if ($signals['expected']) {
             $score += 24;
+        }
+
+        if ($signals['assessment']) {
+            $score += 8;
         }
 
         if ($signals['provisionRef'] !== null) {

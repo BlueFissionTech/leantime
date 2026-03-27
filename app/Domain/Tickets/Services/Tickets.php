@@ -3269,6 +3269,7 @@ class Tickets
             'totalCandidates' => count($tickets),
             'focusCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['focus'] ?? false))),
             'expectedCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['expected'] ?? false))),
+            'assessmentCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['assessment'] ?? false))),
             'provisionedCount' => count(array_filter($rankedTickets, fn (array $ticket) => ! empty($ticket['highImpact']['provisionRef'] ?? null))),
         ];
     }

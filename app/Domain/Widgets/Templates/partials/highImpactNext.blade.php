@@ -4,6 +4,7 @@
     'totalCandidates' => 0,
     'focusCount' => 0,
     'expectedCount' => 0,
+    'assessmentCount' => 0,
     'provisionedCount' => 0,
 ])
 
@@ -28,6 +29,9 @@
             @endif
             @if($expectedCount > 0)
                 <span class="label label-warning">Expected {{ $expectedCount }}</span>
+            @endif
+            @if($assessmentCount > 0)
+                <span class="label">Assessment {{ $assessmentCount }}</span>
             @endif
             @if($provisionedCount > 0)
                 <span class="label label-success">Provisioned {{ $provisionedCount }}</span>
@@ -55,6 +59,9 @@
                         @if(($highImpact['expected'] ?? false) === true)
                             <span class="label label-warning">Expected</span>
                         @endif
+                        @if(($highImpact['assessment'] ?? false) === true)
+                            <span class="label">Assessment</span>
+                        @endif
                         @if(!empty($highImpact['impactLabel']))
                             <span class="label label-important">Impact: {{ ucfirst($highImpact['impactLabel']) }}</span>
                         @endif
@@ -69,6 +76,11 @@
                             · {{ $ticket['milestoneHeadline'] }}
                         @endif
                     </div>
+                    @if(!empty($highImpact['focusNote']))
+                        <div class="tw-mt-xs tw-text-sm tw-text-slate-500">
+                            {{ $highImpact['focusNote'] }}
+                        </div>
+                    @endif
                 </div>
                 <div class="tw-text-right tw-text-xs tw-text-gray-500 tw-min-w-[88px]">
                     <div class="tw-font-semibold tw-text-slate-700">Score {{ $highImpact['score'] ?? 0 }}</div>

@@ -14,13 +14,15 @@ class HighImpactTicketRankerTest extends TestCase
     {
         $ranker = new HighImpactTicketRanker();
 
-        $signals = $ranker->extractSignals('focus, expected:true, impact:high, provision_ref:morpro-42');
+        $signals = $ranker->extractSignals('focus, expected:true, assessment_flag:1, impact:high, provision_ref:morpro-42, focus_note:core-tracked-launch-blocker');
 
         $this->assertTrue($signals['focus']);
         $this->assertTrue($signals['expected']);
+        $this->assertTrue($signals['assessment']);
         $this->assertSame('high', $signals['impactLabel']);
         $this->assertSame(24, $signals['impactWeight']);
         $this->assertSame('morpro-42', $signals['provisionRef']);
+        $this->assertSame('core-tracked-launch-blocker', $signals['focusNote']);
     }
 
     public function test_rank_prioritizes_focus_expected_and_due_signals(): void
@@ -40,7 +42,7 @@ class HighImpactTicketRankerTest extends TestCase
                 'headline' => 'High impact task',
                 'priority' => 2,
                 'dateToFinish' => '2026-03-27 09:00:00',
-                'tags' => 'focus, expected, impact:high, provision_ref:morpro-42',
+                'tags' => 'focus, expected, assessment, impact:high, provision_ref:morpro-42',
             ],
         ];
 
