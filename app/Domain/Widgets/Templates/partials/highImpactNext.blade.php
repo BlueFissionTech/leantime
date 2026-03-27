@@ -1,11 +1,5 @@
 @props([
     'tickets' => [],
-    'projectFilter' => '',
-    'totalCandidates' => 0,
-    'focusCount' => 0,
-    'expectedCount' => 0,
-    'assessmentCount' => 0,
-    'provisionedCount' => 0,
 ])
 
 <div id="highImpactNextWidget"
@@ -14,25 +8,6 @@
      hx-target="#highImpactNextWidget"
      hx-swap="outerHTML"
      class="tw-flex tw-flex-col tw-gap-m">
-
-    <div class="tw-rounded-xl tw-border tw-border-gray-200 tw-bg-slate-50 tw-p-m">
-        <div class="subtitle tw-mb-xs">{{ __('headlines.high_impact_next') }}</div>
-        <div class="tw-text-xs tw-leading-7">
-            <span class="label tw-inline-block tw-mr-xs tw-mb-xs">{{ $totalCandidates }} Tasks</span>
-            @if($focusCount > 0)
-                <span class="label label-info tw-inline-block tw-mr-xs tw-mb-xs">Focus {{ $focusCount }}</span>
-            @endif
-            @if($expectedCount > 0)
-                <span class="label label-warning tw-inline-block tw-mr-xs tw-mb-xs">Expected {{ $expectedCount }}</span>
-            @endif
-            @if($assessmentCount > 0)
-                <span class="label tw-inline-block tw-mr-xs tw-mb-xs">Assessment {{ $assessmentCount }}</span>
-            @endif
-            @if($provisionedCount > 0)
-                <span class="label label-success tw-inline-block tw-mr-xs tw-mb-xs">Provisioned {{ $provisionedCount }}</span>
-            @endif
-        </div>
-    </div>
 
     @if(count($tickets) === 0)
         <div class="tw-rounded-xl tw-border tw-border-dashed tw-border-gray-300 tw-bg-white tw-p-l tw-text-center tw-text-gray-600">

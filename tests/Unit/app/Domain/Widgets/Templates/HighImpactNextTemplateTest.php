@@ -12,6 +12,7 @@ class HighImpactNextTemplateTest extends TestCase
 
         $this->assertIsString($source);
         $this->assertStringNotContainsString("__('text.high_impact_next_helper')", $source);
+        $this->assertStringNotContainsString("__('headlines.high_impact_next')", $source);
     }
 
     public function test_template_wraps_long_badges_and_ticket_text(): void
@@ -23,6 +24,8 @@ class HighImpactNextTemplateTest extends TestCase
         $this->assertStringContainsString('tw-break-words', $source);
         $this->assertStringContainsString('tw-inline-block tw-mr-xs tw-mb-xs', $source);
         $this->assertStringNotContainsString('tw-flex tw-flex-wrap tw-items-center tw-gap-xs', $source);
+        $this->assertStringNotContainsString('Tasks</span>', $source);
+        $this->assertStringNotContainsString('Focus {{ $focusCount }}', $source);
     }
 
     public function test_template_uses_explosion_emoji_in_header_label(): void
