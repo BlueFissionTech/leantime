@@ -61,12 +61,12 @@ class TaskCsvExport
             $user = $users[(string) ($ticket['editorId'] ?? '')] ?? [];
 
             return [
-                'task' => trim((string) ($ticket['headline'] ?? '')) ?: 'Untitled Task',
-                'department' => trim((string) ($user['department'] ?? '')) ?: 'No Department',
-                'assignee' => $assignee !== '' ? $assignee : 'Unassigned',
+                'task' => $this->sanitizeCell((string) ($ticket['headline'] ?? '')) ?: 'Untitled Task',
+                'department' => $this->sanitizeCell((string) ($user['department'] ?? '')) ?: 'No Department',
+                'assignee' => $this->sanitizeCell($assignee) ?: 'Unassigned',
                 'dueDate' => $this->formatDueDate((string) ($ticket['dateToFinish'] ?? '')),
                 'productOrMilestone' => $this->resolveProductOrMilestone($ticket),
-                'priority' => $priorityLabels[$ticket['priority'] ?? ''] ?? 'No Priority',
+                'priority' => $this->sanitizeCell((string) ($priorityLabels[$ticket['priority'] ?? ''] ?? '')) ?: 'No Priority',
             ];
         }, $tickets);
     }
@@ -84,17 +84,17 @@ class TaskCsvExport
 
     private function resolveProductOrMilestone(array $ticket): string
     {
-        $milestone = trim((string) ($ticket['milestoneHeadline'] ?? ''));
+        $milestone = $this->sanitizeCell((string) ($ticket['milestoneHeadline'] ?? ''));
         if ($milestone !== '') {
             return $milestone;
         }
 
-        $product = trim((string) ($ticket['clientName'] ?? ''));
+        $product = $this->sanitizeCell((string) ($ticket['clientName'] ?? ''));
         if ($product !== '') {
             return $product;
         }
 
-        $project = trim((string) ($ticket['projectName'] ?? ''));
+        $project = $this->sanitizeCell((string) ($ticket['projectName'] ?? ''));
         if ($project !== '') {
             return $project;
         }
@@ -119,5 +119,15 @@ class TaskCsvExport
         }
 
         return $indexed;
+    }
+
+    private function sanitizeCell(string $value): string
+    {
+        $normalized = preg_replace('/<[^>]+>/', ' ', $value) ?? $value;
+        $normalized = html_entity_decode(strip_tags($normalized), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $normalized = preg_replace('/\s+/u', ' ', $normalized) ?? '';
+        $normalized = preg_replace('/\s+([,;:.!?])/u', '$1', $normalized) ?? $normalized;
+
+        return trim($normalized);
     }
 }

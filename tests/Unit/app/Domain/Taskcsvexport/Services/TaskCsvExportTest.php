@@ -108,4 +108,39 @@ class TaskCsvExportTest extends TestCase
             $row
         );
     }
+
+    public function test_build_rows_strips_html_and_normalizes_whitespace_from_cells(): void
+    {
+        $ticketService = $this->createMock(TicketService::class);
+        $userService = $this->createMock(UserService::class);
+
+        $ticketService->method('prepareTicketSearchArray')->willReturn([]);
+        $ticketService->method('getAll')->willReturn([
+            [
+                'headline' => '<strong>Alpha</strong><div>Launch</div>',
+                'editorId' => '5',
+                'editorFirstname' => 'Sam',
+                'editorLastname' => 'Lee',
+                'dateToFinish' => '2026-03-30 12:00:00',
+                'milestoneHeadline' => '<span>Core</span>, <em>Phase</em>',
+                'clientName' => '',
+                'projectName' => '',
+                'priority' => 1,
+            ],
+        ]);
+        $ticketService->method('getPriorityLabels')->willReturn([
+            1 => '<span>Critical</span>',
+        ]);
+        $userService->method('getAll')->willReturn([
+            ['id' => 5, 'department' => "<div>Delivery</div>\nTeam"],
+        ]);
+
+        $service = new TaskCsvExport($ticketService, $userService);
+        $rows = $service->buildRows([]);
+
+        $this->assertSame('Alpha Launch', $rows[0]['task']);
+        $this->assertSame('Delivery Team', $rows[0]['department']);
+        $this->assertSame('Core, Phase', $rows[0]['productOrMilestone']);
+        $this->assertSame('Critical', $rows[0]['priority']);
+    }
 }
