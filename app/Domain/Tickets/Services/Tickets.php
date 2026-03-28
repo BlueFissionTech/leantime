@@ -3119,6 +3119,7 @@ class Tickets
             'users' => session('userdata.id'),
             'status' => 'not_done',
             'sprint' => '',
+            'excludeType' => 'milestone,subtask',
         ]);
 
         // Get paginated tickets first
