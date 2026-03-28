@@ -128,11 +128,28 @@ class Widgets
             'fixed' => false,
         ]);
 
+        $this->availableWidgets['projectstatusupdates'] = app()->make("Leantime\Domain\Widgets\Models\Widget", [
+            'id' => 'projectstatusupdates',
+            'name' => 'widgets.title.project_status_updates',
+            'description' => 'widgets.descriptions.project_status_updates',
+            'widgetUrl' => BASE_URL.'/widgets/projectStatusUpdates/get',
+            'gridHeight' => 18,
+            'gridWidth' => 4,
+            'gridMinHeight' => 10,
+            'gridMinWidth' => 3,
+            'gridX' => 8,
+            'gridY' => 61,
+            'alwaysVisible' => false,
+            'noTitle' => false,
+            'fixed' => false,
+        ]);
+
         $this->defaultWidgets = [
             'welcome' => $this->availableWidgets['welcome'],
             'calendar' => $this->availableWidgets['calendar'],
             'todos' => $this->availableWidgets['todos'],
             'highimpactnext' => $this->availableWidgets['highimpactnext'],
+            'projectstatusupdates' => $this->availableWidgets['projectstatusupdates'],
         ];
 
         $this->availableWidgets = self::dispatch_filter('availableWidgets', $this->availableWidgets);
