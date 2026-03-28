@@ -3106,3 +3106,14 @@ body a.btn-link.btn-fancy:hover {
 .newWidget {
     border:1px solid var(--accent2);
 }
+
+.ticket-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ticket-table-scroll .ticketTable {
+    min-width: 1280px;
+}

@@ -101,6 +101,7 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                 <?php $allTickets = $group['items']; ?>
 
                 <?php $tpl->dispatchTplEvent('allTicketsTable.before', ['tickets' => $allTicketGroups]); ?>
+                <div class="ticket-table-scroll">
                 <table class="table table-bordered display ticketTable " style="width:100%">
                 <colgroup>
                     <col class="con1">
@@ -394,6 +395,7 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                     </tfoot>
 
                 </table>
+                </div>
                 <?php $tpl->dispatchTplEvent('allTicketsTable.afterClose', ['tickets' => $allTickets]); ?>
 
             <?php if ($group['label'] != 'all') { ?>
