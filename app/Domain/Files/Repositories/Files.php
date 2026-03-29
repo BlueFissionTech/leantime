@@ -184,6 +184,27 @@ class Files
             ->delete() > 0;
     }
 
+    public function updateFile(int $id, array $values): bool
+    {
+        $allowed = ['realName', 'module', 'moduleId'];
+        $updates = [];
+
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $values)) {
+                $updates[$field] = $values[$field];
+            }
+        }
+
+        if ($updates === []) {
+            return false;
+        }
+
+        return $this->db->table('zp_file')
+            ->where('id', $id)
+            ->limit(1)
+            ->update($updates) >= 0;
+    }
+
     /**
      * @return array|false
      *
