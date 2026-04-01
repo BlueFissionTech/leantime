@@ -157,7 +157,21 @@ class IncomingRequest extends \Illuminate\Http\Request
         $patch_vars = [];
 
         if ($method === 'PATCH') {
-            parse_str($this->getContent(), $patch_vars);
+            $content = $this->getContent();
+
+            if ($content !== false && $content !== null && $content !== '') {
+                $contentType = strtolower((string) $this->headers->get('Content-Type', ''));
+
+                if (str_contains($contentType, 'application/json')) {
+                    $decoded = json_decode($content, true);
+
+                    if (is_array($decoded)) {
+                        $patch_vars = $decoded;
+                    }
+                } else {
+                    parse_str($content, $patch_vars);
+                }
+            }
         }
 
         $params = $this->query->all();

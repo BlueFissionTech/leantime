@@ -44,65 +44,90 @@ class Comments
      */
     public function addComment($values, $module, $entityId, $entity): bool
     {
-        if (isset($values['text']) && $values['text'] != '' && isset($values['father']) && isset($module) && isset($entityId) && isset($entity)) {
-            $mapper = [
-                'text' => $values['text'],
-                'date' => dtHelper()->dbNow()->formatDateTimeForDb(),
-                'userId' => (session('userdata.id')),
-                'moduleId' => $entityId,
-                'commentParent' => ($values['father']),
-                'status' => $values['status'] ?? '',
-            ];
+        return $this->createComment($values, $module, $entityId, $entity) !== false;
+    }
 
-            $comment = $this->commentRepository->addComment($mapper, $module);
-
-            if ($comment) {
-                $mapper['id'] = $comment;
-
-                $currentUrl = CURRENT_URL;
-
-                switch ($module) {
-                    case 'ticket':
-                        $subject = sprintf($this->language->__('email_notifications.new_comment_todo_with_type_subject'), $this->language->__('label.'.strtolower($entity->type)), $entity->id, strip_tags($entity->headline));
-                        $message = sprintf($this->language->__('email_notifications.new_comment_todo_with_type_message'), session('userdata.name'), $this->language->__('label.'.strtolower($entity->type)), strip_tags($entity->headline), strip_tags($values['text']));
-                        $linkLabel = $this->language->__('email_notifications.new_comment_todo_cta');
-                        $currentUrl = BASE_URL.'#/tickets/showTicket/'.$entity->id;
-                        break;
-                    case 'project':
-                        $subject = sprintf($this->language->__('email_notifications.new_comment_project_subject'), $entityId, strip_tags($entity['name']));
-                        $message = sprintf($this->language->__('email_notifications.new_comment_project_message'), session('userdata.name'), strip_tags($entity['name']));
-                        $linkLabel = $this->language->__('email_notifications.new_comment_project_cta');
-                        break;
-                    default:
-                        $subject = $this->language->__('email_notifications.new_comment_general_subject');
-                        $message = sprintf($this->language->__('email_notifications.new_comment_general_message'), session('userdata.name'));
-                        $linkLabel = $this->language->__('email_notifications.new_comment_general_cta');
-                        break;
-                }
-
-                $notification = app()->make(Notification::class);
-
-                $urlQueryParameter = str_contains($currentUrl, '?') ? '&' : '?';
-                $notification->url = [
-                    'url' => $currentUrl.$urlQueryParameter.'projectId='.session('currentProject'),
-                    'text' => $linkLabel,
-                ];
-
-                $notification->entity = $mapper;
-                $notification->module = 'comments';
-                $notification->action = 'commented';
-                $notification->projectId = session('currentProject');
-                $notification->subject = $subject;
-                $notification->authorId = session('userdata.id');
-                $notification->message = $message;
-
-                $this->projectService->notifyProjectUsers($notification);
-
-                return true;
-            }
+    /**
+     * @throws BindingResolutionException
+     *
+     * @return array<string, mixed>|false
+     *
+     * @api
+     */
+    public function createComment($values, $module, $entityId, $entity): array|false
+    {
+        if (! isset($values['text']) || trim((string) $values['text']) === '' || ! isset($module) || ! isset($entityId) || ! isset($entity)) {
+            return false;
         }
 
-        return false;
+        $commentParent = (int) ($values['commentParent'] ?? $values['father'] ?? 0);
+
+        $mapper = [
+            'text' => (string) $values['text'],
+            'date' => dtHelper()->dbNow()->formatDateTimeForDb(),
+            'userId' => (session('userdata.id')),
+            'moduleId' => $entityId,
+            'commentParent' => $commentParent,
+            'status' => $values['status'] ?? '',
+        ];
+
+        $comment = $this->commentRepository->addComment($mapper, $module);
+
+        if (! $comment) {
+            return false;
+        }
+
+        $mapper['id'] = (int) $comment;
+
+        $currentUrl = CURRENT_URL;
+
+        switch ($module) {
+            case 'ticket':
+                $subject = sprintf($this->language->__('email_notifications.new_comment_todo_with_type_subject'), $this->language->__('label.'.strtolower($entity->type)), $entity->id, strip_tags($entity->headline));
+                $message = sprintf($this->language->__('email_notifications.new_comment_todo_with_type_message'), session('userdata.name'), $this->language->__('label.'.strtolower($entity->type)), strip_tags($entity->headline), strip_tags($values['text']));
+                $linkLabel = $this->language->__('email_notifications.new_comment_todo_cta');
+                $currentUrl = BASE_URL.'#/tickets/showTicket/'.$entity->id;
+                break;
+            case 'project':
+                $subject = sprintf($this->language->__('email_notifications.new_comment_project_subject'), $entityId, strip_tags($entity['name']));
+                $message = sprintf($this->language->__('email_notifications.new_comment_project_message'), session('userdata.name'), strip_tags($entity['name']));
+                $linkLabel = $this->language->__('email_notifications.new_comment_project_cta');
+                break;
+            default:
+                $subject = $this->language->__('email_notifications.new_comment_general_subject');
+                $message = sprintf($this->language->__('email_notifications.new_comment_general_message'), session('userdata.name'));
+                $linkLabel = $this->language->__('email_notifications.new_comment_general_cta');
+                break;
+        }
+
+        $notification = app()->make(Notification::class);
+
+        $urlQueryParameter = str_contains($currentUrl, '?') ? '&' : '?';
+        $notification->url = [
+            'url' => $currentUrl.$urlQueryParameter.'projectId='.(($entity->projectId ?? session('currentProject')) ?? -1),
+            'text' => $linkLabel,
+        ];
+
+        $notification->entity = $mapper;
+        $notification->module = 'comments';
+        $notification->action = 'commented';
+        $notification->projectId = (($entity->projectId ?? session('currentProject')) ?? -1);
+        $notification->subject = $subject;
+        $notification->authorId = session('userdata.id');
+        $notification->message = $message;
+
+        $this->projectService->notifyProjectUsers($notification);
+
+        return [
+            'id' => (int) $mapper['id'],
+            'module' => (string) $module,
+            'moduleId' => (int) $entityId,
+            'text' => (string) $mapper['text'],
+            'status' => (string) $mapper['status'],
+            'commentParent' => (int) $commentParent,
+            'userId' => (int) $mapper['userId'],
+            'date' => (string) $mapper['date'],
+        ];
     }
 
     /**
@@ -145,5 +170,10 @@ class Comments
         }
 
         return $comments;
+    }
+
+    public function getRecentProjectStatusUpdates(int $limit = 10): array|false
+    {
+        return $this->commentRepository->getRecentProjectStatusUpdates($limit);
     }
 }

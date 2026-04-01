@@ -2171,6 +2171,26 @@ body .widgettitle .editHeadline:hover {
     margin: 0;
 }
 
+.commentContent .tiptap-content p {
+    margin: 0 0 1em 0;
+}
+
+.commentContent .tiptap-content p:last-child {
+    margin-bottom: 0;
+}
+
+.ticket-due-date {
+    font-weight: 600;
+}
+
+.ticket-due-date--overdue {
+    color: var(--dark-red) !important;
+}
+
+.ticket-due-date--soon {
+    color: var(--yellow) !important;
+}
+
 #mainToggler {
     margin-bottom:15px;
     display:block;
@@ -3085,4 +3105,15 @@ body a.btn-link.btn-fancy:hover {
 
 .newWidget {
     border:1px solid var(--accent2);
+}
+
+.ticket-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ticket-table-scroll .ticketTable {
+    min-width: 1280px;
 }

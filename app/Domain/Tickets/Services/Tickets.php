@@ -22,9 +22,12 @@ use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
+use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
+use Leantime\Domain\Tickets\Support\HighImpactTicketRanker;
+use Leantime\Domain\Tickets\Support\SubtaskProgress;
 use Leantime\Domain\Timesheets\Repositories\Timesheets as TimesheetRepository;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 
@@ -257,6 +260,10 @@ class Tickets
             $searchCriteria['currentProject'] = $searchParams['currentProject'];
         }
 
+        if (isset($searchParams['projectId']) === true) {
+            $searchCriteria['currentProject'] = $searchParams['projectId'] === 'all' ? '' : $searchParams['projectId'];
+        }
+
         if (isset($searchParams['currentUser']) === true) {
             $searchCriteria['currentUser'] = $searchParams['currentUser'];
         }
@@ -316,10 +323,18 @@ class Tickets
             $searchCriteria['clients'] = $searchParams['clients'];
         }
 
+        if ($searchCriteria['currentProject'] === '') {
+            $searchCriteria['sprint'] = '';
+        }
+
         // The sprint selector is just a filter but remains in place across the session. Setting session here when it's selected
         if (isset($searchParams['sprint']) === true) {
-            $searchCriteria['sprint'] = $searchParams['sprint'];
-            session(['currentSprint' => $searchCriteria['sprint']]);
+            if ($searchCriteria['currentProject'] === '') {
+                $searchCriteria['sprint'] = '';
+            } else {
+                $searchCriteria['sprint'] = $searchParams['sprint'];
+                session(['currentSprint' => $searchCriteria['sprint']]);
+            }
         }
 
         return $searchCriteria;
@@ -1760,9 +1775,42 @@ class Tickets
      */
     public function getAllSubtasks(int $ticketId): false|array
     {
+        $subtasks = $this->ticketRepository->getAllSubtasks($ticketId);
 
-        // TODO: Refactor to be recursive
-        return $this->ticketRepository->getAllSubtasks($ticketId);
+        if ($subtasks === false) {
+            return false;
+        }
+
+        return SubtaskProgress::sortByDueDate($subtasks);
+    }
+
+    /**
+     * @return array{completed: int, total: int}
+     */
+    public function getSubtaskSummary(int $ticketId): array
+    {
+        $subtasks = $this->getAllSubtasks($ticketId);
+
+        return SubtaskProgress::summarize(is_array($subtasks) ? $subtasks : []);
+    }
+
+    public function syncParentCompletionFromSubtasks(int $parentTicketId): void
+    {
+        $parentTicket = $this->getTicket($parentTicketId);
+        if (! $parentTicket) {
+            return;
+        }
+
+        $subtasks = $this->getAllSubtasks($parentTicketId);
+        if (! is_array($subtasks) || ! SubtaskProgress::areAllComplete($subtasks)) {
+            return;
+        }
+
+        if ((string) $parentTicket->status === '0') {
+            return;
+        }
+
+        $this->ticketRepository->updateTicketStatus($parentTicketId, 0);
     }
 
     /**
@@ -2046,13 +2094,12 @@ class Tickets
      */
     public function updateTicket($values): array|bool
     {
+        $currentTicket = $this->getTicket($values['id']);
+        if (! $currentTicket) {
+            return ['msg' => 'This ticket id does not exist within your leantime account.', 'type' => 'error'];
+        }
+
         if (! isset($values['headline'])) {
-            $currentTicket = $this->getTicket($values['id']);
-
-            if (! $currentTicket) {
-                return ['msg' => 'This ticket id does not exist within your leantime account.', 'type' => 'error'];
-            }
-
             $values['headline'] = $currentTicket->headline;
         }
 
@@ -2081,6 +2128,8 @@ class Tickets
             'dependingTicketId' => $values['dependingTicketId'] ?? '',
             'milestoneid' => $values['milestoneid'] ?? '',
             'collaborators' => $values['collaborators'] ?? [],
+            'dependencyTicketIds' => $values['dependencyTicketIds'] ?? [],
+            'autoRescheduleDependencies' => (int) ($values['autoRescheduleDependencies'] ?? 0),
         ];
 
         if ($values['projectId'] === null || $values['projectId'] === '' || $values['projectId'] === false) {
@@ -2092,9 +2141,46 @@ class Tickets
         }
 
         $values = $this->prepareTicketDates($values);
+        $ticketdependencyService = $this->getTicketdependencyService();
+        $latestDependencyFinish = $ticketdependencyService->getLatestDependencyFinish(
+            (int) $values['id'],
+            (int) $values['projectId'],
+            $values['dependencyTicketIds']
+        );
+
+        if ($latestDependencyFinish !== null) {
+            if ($values['autoRescheduleDependencies'] === 1) {
+                $values = $ticketdependencyService->alignScheduleToDependencies($values, $latestDependencyFinish);
+            } elseif ($ticketdependencyService->violatesPlannedStart($values['editFrom'] ?: null, $latestDependencyFinish)) {
+                return [
+                    'msg' => 'notifications.ticket_dependency_schedule_conflict',
+                    'type' => 'error',
+                ];
+            }
+        }
+
+        $statusLabels = $this->getStatusLabels($values['projectId']);
+        $values['status'] = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
 
         // Update Ticket
         if ($this->ticketRepository->updateTicket($values, $values['id']) === true) {
+            $ticketdependencyService->syncDependencies(
+                (int) $values['id'],
+                $values['dependencyTicketIds'],
+                (int) (session('userdata.id') ?? -1)
+            );
+            $ticketdependencyService->setAutoRescheduleEnabled(
+                (int) $values['id'],
+                $values['autoRescheduleDependencies'] === 1,
+                (int) (session('userdata.id') ?? -1)
+            );
+
+            $coercedStatus = $ticketdependencyService->coerceBlockedStatus((int) $values['id'], $values['status'], $statusLabels);
+            if ((string) $coercedStatus !== (string) $values['status']) {
+                $this->ticketRepository->patchTicket($values['id'], ['status' => $coercedStatus]);
+                $values['status'] = $coercedStatus;
+            }
+
             $subject = sprintf($this->language->__('email_notifications.todo_update_subject'), $values['id'], strip_tags($values['headline']));
             $actual_link = BASE_URL.'/dashboard/home#/tickets/showTicket/'.$values['id'];
             $message = sprintf($this->language->__('email_notifications.todo_update_message'), session('userdata.name'), $values['headline']);
@@ -2115,6 +2201,11 @@ class Tickets
             $this->projectService->notifyProjectUsers($notification);
 
             self::dispatchEvent('ticket_updated');
+
+            $parentTicketId = (int) ($values['dependingTicketId'] ?: $currentTicket->dependingTicketId ?: 0);
+            if ($parentTicketId > 0) {
+                $this->syncParentCompletionFromSubtasks($parentTicketId);
+            }
 
             return true;
         }
@@ -2172,6 +2263,14 @@ class Tickets
             return false;
         }
 
+        if (isset($params['status'])) {
+            $params['status'] = $this->getTicketdependencyService()->coerceBlockedStatus(
+                (int) $id,
+                $params['status'],
+                $this->getStatusLabels($ticket->projectId)
+            );
+        }
+
         $params = $this->prepareTicketDates($params);
 
         $return = $this->ticketRepository->patchTicket($id, $params);
@@ -2206,7 +2305,7 @@ class Tickets
             return $this->patch($ticket->id, ['projectId' => $ticket->projectId, 'sprint' => '', 'dependingTicketId' => '', 'milestoneid' => '']);
         }
 
-        return false;
+        return $return;
     }
 
     /**
@@ -2304,6 +2403,8 @@ class Tickets
 
             self::dispatchEvent('ticket_updated');
         }
+
+        $this->syncParentCompletionFromSubtasks((int) $parentTicket->id);
 
         return true;
     }
@@ -2427,6 +2528,11 @@ class Tickets
                 if (is_array($tickets) === true) {
                     foreach ($tickets as $key => $ticketString) {
                         $id = substr($ticketString, 9);
+                        $status = $this->getTicketdependencyService()->coerceBlockedStatus(
+                            (int) $id,
+                            $status,
+                            $this->getStatusLabels(session('currentProject'))
+                        );
 
                         if ($this->ticketRepository->updateTicketStatus($id, $status, ($key * 100), $handler) === false) {
                             return false;
@@ -2762,11 +2868,15 @@ class Tickets
      */
     public function getTicketTemplateAssignments($params): array
     {
-
-        $currentSprint = $this->sprintService->getCurrentSprintId((int) session('currentProject'));
-
         $searchCriteria = $this->prepareTicketSearchArray($params);
+        if (! is_array($searchCriteria)) {
+            $searchCriteria = [];
+        }
         $searchCriteria['orderBy'] = 'kanbansort';
+
+        $filterProjectId = $searchCriteria['currentProject'] ?? session('currentProject');
+        $isAllProjectsScope = $filterProjectId === '' || $filterProjectId === null || $filterProjectId === 'all';
+        $currentSprint = $isAllProjectsScope ? '' : $this->sprintService->getCurrentSprintId((int) $filterProjectId);
 
         $allTickets = $this->getAllGrouped($searchCriteria);
         $allTicketStates = $this->getStatusLabels();
@@ -2784,16 +2894,11 @@ class Tickets
 
         $onTheClock = $this->timesheetService->isClocked(session('userdata.id'));
 
-        $sprints = $this->sprintService->getAllSprints(session('currentProject'));
-        $futureSprints = $this->sprintService->getAllFutureSprints((int) session('currentProject'));
+        $sprints = $isAllProjectsScope ? [] : $this->sprintService->getAllSprints($filterProjectId);
+        $futureSprints = $isAllProjectsScope ? [] : $this->sprintService->getAllFutureSprints((int) $filterProjectId);
 
-        $users = $this->projectService->getUsersAssignedToProject(session('currentProject'));
-
-        $milestones = $this->getAllMilestones([
-            'sprint' => '',
-            'type' => 'milestone',
-            'currentProject' => session('currentProject'),
-        ]);
+        $users = $this->getTicketFilterUsers($searchCriteria['currentProject']);
+        $milestones = $this->getTicketFilterMilestones($searchCriteria['currentProject']);
 
         $groupByOptions = $this->getGroupByFieldOptions();
         $newField = $this->getNewFieldOptions();
@@ -2807,7 +2912,7 @@ class Tickets
         $allTickets = self::dispatchFilter('filterTickets', $allTickets);
 
         return [
-            'currentSprint' => session('currentSprint'),
+            'currentSprint' => $isAllProjectsScope ? '' : ($currentSprint ?: session('currentSprint')),
             'searchCriteria' => $searchCriteria,
             'allTickets' => $allTickets,
             'allTicketStates' => $allTicketStates,
@@ -2826,6 +2931,55 @@ class Tickets
             'sortOptions' => $sortOptions,
             'searchParams' => $searchUrlString,
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getTicketFilterUsers(string|int|null $projectId): array
+    {
+        if ($projectId !== null && $projectId !== '' && $projectId !== 'all') {
+            return $this->projectService->getUsersAssignedToProject((int) $projectId);
+        }
+
+        $usersById = [];
+        $projects = $this->projectService->getProjectsUserHasAccessTo(session('userdata.id'));
+
+        if (is_array($projects)) {
+            foreach ($projects as $project) {
+                $projectUsers = $this->projectService->getUsersAssignedToProject((int) $project['id']);
+                foreach ($projectUsers as $user) {
+                    $usersById[$user['id']] = $user;
+                }
+            }
+        }
+
+        return array_values($usersById);
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    private function getTicketFilterMilestones(string|int|null $projectId): array
+    {
+        if ($projectId !== null && $projectId !== '' && $projectId !== 'all') {
+            return $this->getAllMilestones([
+                'sprint' => '',
+                'type' => 'milestone',
+                'currentProject' => $projectId,
+            ]);
+        }
+
+        $flattenedMilestones = [];
+        $milestonesByProject = $this->getAllMilestonesByUserProjects(session('userdata.id'));
+
+        foreach ($milestonesByProject as $projectMilestones) {
+            foreach ($projectMilestones as $milestone) {
+                $flattenedMilestones[$milestone->id] = $milestone;
+            }
+        }
+
+        return array_values($flattenedMilestones);
     }
 
     /**
@@ -2965,6 +3119,7 @@ class Tickets
             'users' => session('userdata.id'),
             'status' => 'not_done',
             'sprint' => '',
+            'excludeType' => 'milestone,subtask',
         ]);
 
         // Get paginated tickets first
@@ -3074,6 +3229,49 @@ class Tickets
             ),
             'projectFilter' => $projectFilter,
             'groupBy' => $groupBy,
+        ];
+    }
+
+    public function getHighImpactNextAssignments(array $params = []): array
+    {
+        $projectFilter = '';
+        if (session()->exists('userHomeProjectFilter')) {
+            $projectFilter = session('userHomeProjectFilter');
+        }
+
+        if (isset($params['projectFilter'])) {
+            $projectFilter = $params['projectFilter'] !== 'all' ? $params['projectFilter'] : '';
+        }
+
+        $limit = isset($params['limit']) ? max(1, (int) $params['limit']) : 8;
+
+        $searchCriteria = $this->prepareTicketSearchArray([
+            'currentProject' => $projectFilter,
+            'currentUser' => session('userdata.id'),
+            'users' => session('userdata.id'),
+            'status' => 'not_done',
+            'sprint' => '',
+        ]);
+
+        $tickets = $this->ticketRepository->getAllBySearchCriteria(
+            searchCriteria: $searchCriteria,
+            sort: 'duedate',
+            limit: 100,
+            includeCounts: false,
+            offset: 0
+        );
+
+        $ranker = new HighImpactTicketRanker();
+        $rankedTickets = $ranker->rank($tickets, $limit, dtHelper()->userNow()->setToDbTimezone());
+
+        return [
+            'tickets' => $rankedTickets,
+            'projectFilter' => $projectFilter,
+            'totalCandidates' => count($tickets),
+            'focusCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['focus'] ?? false))),
+            'expectedCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['expected'] ?? false))),
+            'assessmentCount' => count(array_filter($rankedTickets, fn (array $ticket) => (bool) ($ticket['highImpact']['assessment'] ?? false))),
+            'provisionedCount' => count(array_filter($rankedTickets, fn (array $ticket) => ! empty($ticket['highImpact']['provisionRef'] ?? null))),
         ];
     }
 
@@ -3665,5 +3863,10 @@ class Tickets
         }
 
         return $todo;
+    }
+
+    private function getTicketdependencyService(): TicketdependencyService
+    {
+        return app()->make(TicketdependencyService::class);
     }
 }

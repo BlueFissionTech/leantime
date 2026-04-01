@@ -78,6 +78,22 @@ class Tickets
 
     public array $efforts = ['0.5' => '< 2min', '1' => 'XS', '2' => 'S', '3' => 'M', '5' => 'L', '8' => 'XL', '13' => 'XXL'];
 
+    private function getDueDateSortExpression(): string
+    {
+        $column = $this->dbHelper->wrapColumn('zp_tickets.dateToFinish');
+        $columnText = $this->dbHelper->castAs($column, 'text');
+
+        return "CASE WHEN {$column} IS NULL OR {$columnText} = '' OR {$columnText} = '0000-00-00 00:00:00' OR {$columnText} = '1969-12-31 00:00:00' THEN 1 ELSE 0 END";
+    }
+
+    private function getSafeDateFormatExpression(string $column, string $format): string
+    {
+        $formatted = $this->dbHelper->formatDate($column, $format);
+        $columnText = $this->dbHelper->castAs($column, 'text');
+
+        return "CASE WHEN {$column} IS NULL OR {$columnText} = '' OR {$columnText} = '0000-00-00' OR {$columnText} = '0000-00-00 00:00:00' OR {$columnText} = '1969-12-31' OR {$columnText} = '1969-12-31 00:00:00' THEN NULL ELSE {$formatted} END";
+    }
+
     public array $type = ['task', 'subtask', 'story', 'bug'];
 
     public array $typeIcons = ['story' => 'fa-book', 'task' => 'fa-check-square', 'subtask' => 'fa-diagram-successor', 'bug' => 'fa-bug'];
@@ -373,11 +389,13 @@ class Tickets
         if ($includeCounts) {
             $query->selectRaw('COALESCE(comment_agg.comment_count, 0) AS '.$this->dbHelper->wrapColumn('commentCount'))
                 ->selectRaw('COALESCE(file_agg.file_count, 0) AS '.$this->dbHelper->wrapColumn('fileCount'))
-                ->selectRaw('COALESCE(subtask_agg.subtask_count, 0) AS '.$this->dbHelper->wrapColumn('subtaskCount'));
+                ->selectRaw('COALESCE(subtask_agg.subtask_count, 0) AS '.$this->dbHelper->wrapColumn('subtaskCount'))
+                ->selectRaw('COALESCE(subtask_agg.done_subtask_count, 0) AS '.$this->dbHelper->wrapColumn('doneSubtaskCount'));
         } else {
             $query->selectRaw('0 AS '.$this->dbHelper->wrapColumn('commentCount'))
                 ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('fileCount'))
-                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('subtaskCount'));
+                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('subtaskCount'))
+                ->selectRaw('0 AS '.$this->dbHelper->wrapColumn('doneSubtaskCount'));
         }
 
         $query->leftJoin('zp_projects', 'zp_tickets.projectId', '=', 'zp_projects.id')
@@ -434,6 +452,7 @@ class Tickets
                     $this->connection->table('zp_tickets')
                         ->select('dependingTicketId')
                         ->selectRaw('COUNT(*) as subtask_count')
+                        ->selectRaw('SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as done_subtask_count')
                         ->where('dependingTicketId', '>', 0)
                         ->groupBy('dependingTicketId'),
                     'subtask_agg',
@@ -550,11 +569,26 @@ class Tickets
                 $q->whereRaw($findInSetSql, [$term])
                     ->orWhere('zp_tickets.headline', 'LIKE', $termWild)
                     ->orWhere('zp_tickets.description', 'LIKE', $termWild)
-                    ->orWhere('zp_tickets.id', 'LIKE', $termWild);
+                    ->orWhere('zp_tickets.id', 'LIKE', $termWild)
+                    ->orWhere('zp_projects.name', 'LIKE', $termWild)
+                    ->orWhere('milestone.headline', 'LIKE', $termWild)
+                    ->orWhere('parent.headline', 'LIKE', $termWild)
+                    ->orWhere('t1.firstname', 'LIKE', $termWild)
+                    ->orWhere('t1.lastname', 'LIKE', $termWild)
+                    ->orWhereRaw("CONCAT(t1.firstname, ' ', t1.lastname) LIKE ?", [$termWild])
+                    ->orWhere('t2.firstname', 'LIKE', $termWild)
+                    ->orWhere('t2.lastname', 'LIKE', $termWild)
+                    ->orWhereRaw("CONCAT(t2.firstname, ' ', t2.lastname) LIKE ?", [$termWild]);
             });
         }
 
-        if (isset($searchCriteria['sprint']) && $searchCriteria['sprint'] > 0 && $searchCriteria['sprint'] != 'all') {
+        if (
+            isset($searchCriteria['sprint']) &&
+            $searchCriteria['sprint'] !== '' &&
+            $searchCriteria['sprint'] !== 'all' &&
+            $searchCriteria['sprint'] !== 'backlog' &&
+            preg_match('/^[0-9,]+$/', (string) $searchCriteria['sprint'])
+        ) {
             $sprintIds = explode(',', $searchCriteria['sprint']);
             $query->whereIn('zp_tickets.sprint', $sprintIds);
         }
@@ -591,6 +625,7 @@ class Tickets
             $groupByColumns[] = 'comment_agg.comment_count';
             $groupByColumns[] = 'file_agg.file_count';
             $groupByColumns[] = 'subtask_agg.subtask_count';
+            $groupByColumns[] = 'subtask_agg.done_subtask_count';
         }
 
         $query->groupBy($groupByColumns);
@@ -603,7 +638,7 @@ class Tickets
             $query->orderBy('zp_tickets.kanbanSortIndex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
         } elseif ($sort == 'duedate') {
-            $query->orderByRaw('('.$this->dbHelper->wrapColumn('zp_tickets.dateToFinish').' IS NULL)')
+            $query->orderByRaw($this->getDueDateSortExpression())
                 ->orderBy('zp_tickets.dateToFinish', 'ASC')
                 ->orderBy('zp_tickets.sortindex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
@@ -762,9 +797,14 @@ class Tickets
             $query->where('zp_tickets.editorId', (string) $userId);
         }
 
-        $query->where(function ($q) use ($dateFrom, $dateTo) {
-            $q->whereBetween('zp_tickets.editFrom', [$dateFrom->formatDateTimeForDb(), $dateTo->formatDateTimeForDb()])
-                ->orWhereBetween('zp_tickets.editTo', [$dateFrom->formatDateTimeForDb(), $dateTo->formatDateTimeForDb()]);
+        $editFromText = $this->dbHelper->castAs($this->dbHelper->wrapColumn('zp_tickets.editFrom'), 'text');
+        $editToText = $this->dbHelper->castAs($this->dbHelper->wrapColumn('zp_tickets.editTo'), 'text');
+        $fromValue = $dateFrom->formatDateTimeForDb();
+        $toValue = $dateTo->formatDateTimeForDb();
+
+        $query->where(function ($q) use ($editFromText, $editToText, $fromValue, $toValue) {
+            $q->whereRaw("({$editFromText} <> '' AND {$editFromText} <> '0000-00-00 00:00:00' AND {$editFromText} <> '1969-12-31 00:00:00' AND {$editFromText} BETWEEN ? AND ?)", [$fromValue, $toValue])
+                ->orWhereRaw("({$editToText} <> '' AND {$editToText} <> '0000-00-00 00:00:00' AND {$editToText} <> '1969-12-31 00:00:00' AND {$editToText} BETWEEN ? AND ?)", [$fromValue, $toValue]);
         });
 
         $results = $query->get();
@@ -908,18 +948,8 @@ class Tickets
 
     public function getAllSubtasks($id): false|array
     {
-        $dateFormatSql = match ($this->dbHelper->getDriverName()) {
-            'mysql' => "DATE_FORMAT(zp_tickets.date, '%Y,%m,%e')",
-            'pgsql' => "TO_CHAR(zp_tickets.date, 'YYYY,MM,DD')",
-            default => "DATE_FORMAT(zp_tickets.date, '%Y,%m,%e')",
-        };
-
-        $wrappedDateToFinish = $this->dbHelper->wrapColumn('zp_tickets.dateToFinish');
-        $dateToFinishFormatSql = match ($this->dbHelper->getDriverName()) {
-            'mysql' => "DATE_FORMAT({$wrappedDateToFinish}, '%Y,%m,%e')",
-            'pgsql' => "TO_CHAR({$wrappedDateToFinish}, 'YYYY,MM,DD')",
-            default => "DATE_FORMAT({$wrappedDateToFinish}, '%Y,%m,%e')",
-        };
+        $dateFormatSql = $this->getSafeDateFormatExpression('zp_tickets.date', '%Y,%m,%e');
+        $dateToFinishFormatSql = $this->getSafeDateFormatExpression($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e');
 
         $results = $this->connection->table('zp_tickets')
             ->select([
@@ -998,8 +1028,8 @@ class Tickets
                 't3.lastname as editorLastname',
             ])
             ->selectRaw("CASE WHEN zp_tickets.type <> '' THEN zp_tickets.type ELSE 'task' END AS type")
-            ->selectRaw($this->dbHelper->formatDate('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
-            ->selectRaw($this->dbHelper->formatDate($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
+            ->selectRaw($this->getSafeDateFormatExpression('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
+            ->selectRaw($this->getSafeDateFormatExpression($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
             ->selectRaw('COALESCE('.$this->dbHelper->wrapColumn('zp_tickets.hourRemaining').', 0) AS '.$this->dbHelper->wrapColumn('hourRemaining'))
             ->selectRaw('COALESCE('.$this->dbHelper->wrapColumn('zp_tickets.planHours').', 0) AS '.$this->dbHelper->wrapColumn('planHours'))
             ->leftJoin('zp_projects', 'zp_tickets.projectId', '=', 'zp_projects.id')
@@ -1080,8 +1110,8 @@ class Tickets
                 'depMilestone.headline as milestoneHeadline',
             ])
             ->selectRaw("CASE WHEN zp_tickets.type <> '' THEN zp_tickets.type ELSE 'task' END AS type")
-            ->selectRaw($this->dbHelper->formatDate('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
-            ->selectRaw($this->dbHelper->formatDate($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
+            ->selectRaw($this->getSafeDateFormatExpression('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
+            ->selectRaw($this->getSafeDateFormatExpression($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
             ->selectRaw('CASE WHEN ('.$this->dbHelper->wrapColumn('depMilestone.tags').' IS NULL OR '.$this->dbHelper->wrapColumn('depMilestone.tags')." = '') THEN 'var(--grey)' ELSE ".$this->dbHelper->wrapColumn('depMilestone.tags').' END AS '.$this->dbHelper->wrapColumn('milestoneColor'))
             ->selectRaw("CASE WHEN (zp_tickets.tags IS NULL OR zp_tickets.tags = '') THEN 'var(--grey)' ELSE zp_tickets.tags END AS tags")
             ->leftJoin('zp_projects', 'zp_tickets.projectId', '=', 'zp_projects.id')
@@ -1193,7 +1223,13 @@ class Tickets
             });
         }
 
-        if (isset($searchCriteria['sprint']) && $searchCriteria['sprint'] > 0 && $searchCriteria['sprint'] != 'all') {
+        if (
+            isset($searchCriteria['sprint']) &&
+            $searchCriteria['sprint'] !== '' &&
+            $searchCriteria['sprint'] !== 'all' &&
+            $searchCriteria['sprint'] !== 'backlog' &&
+            preg_match('/^[0-9,]+$/', (string) $searchCriteria['sprint'])
+        ) {
             $sprintIds = explode(',', $searchCriteria['sprint']);
             $query->where(function ($q) use ($sprintIds) {
                 $q->whereIn('zp_tickets.sprint', $sprintIds)
@@ -1232,7 +1268,7 @@ class Tickets
             $query->orderBy('zp_tickets.kanbanSortIndex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
         } elseif ($sort == 'duedate') {
-            $query->orderByRaw('('.$this->dbHelper->wrapColumn('zp_tickets.dateToFinish').' IS NULL)')
+            $query->orderByRaw($this->getDueDateSortExpression())
                 ->orderBy('zp_tickets.dateToFinish', 'ASC')
                 ->orderBy('zp_tickets.sortindex', 'ASC')
                 ->orderByDesc('zp_tickets.id');
@@ -1307,8 +1343,8 @@ class Tickets
                 'zp_tickets.milestoneid',
             ])
             ->selectRaw("CASE WHEN zp_tickets.type <> '' THEN zp_tickets.type ELSE 'task' END AS type")
-            ->selectRaw($this->dbHelper->formatDate('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
-            ->selectRaw($this->dbHelper->formatDate($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
+            ->selectRaw($this->getSafeDateFormatExpression('zp_tickets.date', '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDate'))
+            ->selectRaw($this->getSafeDateFormatExpression($this->dbHelper->wrapColumn('zp_tickets.dateToFinish'), '%Y,%m,%e').' AS '.$this->dbHelper->wrapColumn('timelineDateToFinish'))
             ->where('zp_tickets.type', '<>', 'milestone')
             ->where('zp_tickets.projectId', $projectId)
             ->orderBy('zp_tickets.date', 'ASC')

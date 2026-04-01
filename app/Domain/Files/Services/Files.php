@@ -36,6 +36,11 @@ class Files
         return $this->fileRepository->getFilesByModule($module, $entityId, $userId);
     }
 
+    public function getFile(int $fileId): false|array
+    {
+        return $this->fileRepository->getFile($fileId);
+    }
+
     /**
      * @throws BindingResolutionException
      *
@@ -137,6 +142,11 @@ class Files
     public function deleteFile($fileId): bool
     {
         return $this->fileRepository->deleteFile($fileId);
+    }
+
+    public function updateFile(int $fileId, array $values): bool
+    {
+        return $this->fileRepository->updateFile($fileId, $values);
     }
 
     public function getFilePathById($fileId): false|string

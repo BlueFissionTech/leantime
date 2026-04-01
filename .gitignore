@@ -113,6 +113,9 @@ public/theme/dts/
 nbproject
 config/config.yaml
 config/.env
+/.env
+/.env.*
+!/.env.example
 
 # Documentor
 .phpdoc/cache
@@ -148,3 +151,6 @@ tests/Httprequests/http-client.private.env.json
 /AGENTS.md
 /AGENTS.behavior.md
 /harness.json
+/.env
+/.env.*
+!/.env.example

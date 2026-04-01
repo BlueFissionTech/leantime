@@ -6,6 +6,10 @@ foreach ($__data as $var => $val) {
 }
 $sprints = $tpl->get('sprints');
 $searchCriteria = $tpl->get('searchCriteria');
+
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
 $currentSprint = $tpl->get('currentSprint');
 $allTickets = $tpl->get('allTickets');
 
@@ -20,6 +24,13 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
 $efforts = $tpl->get('efforts');
 $priorities = $tpl->get('priorities');
 $statusLabels = $tpl->get('allTicketStates');
+$ticketdependencyService = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class);
+$blockedTicketIds = [];
+
+foreach ($allTicketGroups as $ticketGroup) {
+    $groupTicketIds = array_map(fn ($ticketRow) => (int) $ticketRow['id'], $ticketGroup);
+    $blockedTicketIds += $ticketdependencyService->getBlockedTicketMap($groupTicketIds, $statusLabels);
+}
 
 $newField = $tpl->get('newField');
 
@@ -90,6 +101,7 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                 <?php $allTickets = $group['items']; ?>
 
                 <?php $tpl->dispatchTplEvent('allTicketsTable.before', ['tickets' => $allTicketGroups]); ?>
+                <div class="ticket-table-scroll">
                 <table class="table table-bordered display ticketTable " style="width:100%">
                 <colgroup>
                     <col class="con1">
@@ -132,7 +144,8 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                 <tbody>
                     <?php $tpl->dispatchTplEvent('allTicketsTable.beforeFirstRow', ['tickets' => $allTickets]); ?>
                     <?php foreach ($allTickets as $rowNum => $row) {?>
-                        <tr style="height:1px;">
+                        <?php $isBlocked = $blockedTicketIds[(int) $row['id']] ?? false; ?>
+                        <tr style="height:1px;<?= $isBlocked ? ' opacity:0.7; background:rgba(0,0,0,0.03);' : '' ?>">
                             <?php $tpl->dispatchTplEvent('allTicketsTable.afterRowStart', ['rowNum' => $rowNum, 'tickets' => $allTickets]); ?>
                             <td data-order="<?= $tpl->e($row['id']); ?>">
                                 #<?= $tpl->e($row['id']); ?>
@@ -142,7 +155,11 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                             <?php if ($row['dependingTicketId'] > 0) { ?>
                                 <small><a href="#/tickets/showTicket/<?= $row['dependingTicketId'] ?>" preload="mouseover"><?= $tpl->escape($row['parentHeadline']) ?></a></small> //<br />
                             <?php } ?>
-                            <a class='ticketModal' href="#/tickets/showTicket/<?= $tpl->e($row['id']); ?>" preload="mouseover"><?= $tpl->e($row['headline']); ?></a></td>
+                            <a class='ticketModal' href="#/tickets/showTicket/<?= $tpl->e($row['id']); ?>" preload="mouseover"><?= $tpl->e($row['headline']); ?></a>
+                            <?php if ($isBlocked) { ?>
+                                <br /><small class="label label-important">Blocked</small>
+                            <?php } ?>
+                        </td>
 
                             <?php
 
@@ -378,6 +395,7 @@ $tpl->dispatchTplEvent('filters.beforeLefthandSectionClose');
                     </tfoot>
 
                 </table>
+                </div>
                 <?php $tpl->dispatchTplEvent('allTicketsTable.afterClose', ['tickets' => $allTickets]); ?>
 
             <?php if ($group['label'] != 'all') { ?>

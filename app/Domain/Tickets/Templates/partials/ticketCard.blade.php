@@ -1,4 +1,15 @@
-<div class="ticketBox fixed priority-border-{{ $row['priority'] }}" data-val="{{ $row['id'] }}">
+@php
+    $isBlocked = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class)
+        ->isTicketBlocked((int) $row['id'], $statusLabels);
+    $dueDateAlert = app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
+    $dueDateClass = match ($dueDateAlert) {
+        'overdue' => 'ticket-due-date ticket-due-date--overdue',
+        'dueSoon' => 'ticket-due-date ticket-due-date--soon',
+        default => 'ticket-due-date',
+    };
+@endphp
+
+<div class="ticketBox fixed priority-border-{{ $row['priority'] }}" data-val="{{ $row['id'] }}" @if($isBlocked) style="opacity:0.7; filter:grayscale(0.15);" @endif>
     <div class="row">
         <div class="col-md-8 titleContainer">
             @if($cardType == "full")
@@ -8,6 +19,11 @@
                 @endif
             @endif
             <strong><a href="#/tickets/showTicket/{{ $row['id'] }}" >{{ $row['headline'] }}</a></strong>
+            @if($isBlocked)
+                <div class="tw-mt-xs">
+                    <span class="label label-important">Blocked</span>
+                </div>
+            @endif
 
         </div>
         <div class="col-md-4 timerContainer" style="padding:5px 15px;" id="timerContainer-{{ $row['id'] }}">
@@ -29,7 +45,7 @@
             <div class="col-md-4" style="padding:0 15px;">
                 @if($cardType == "full")
                     <i class="fa-solid fa-business-time infoIcon" data-tippy-content=" {{ __("label.due") }}"></i>
-                    <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
+                    <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput {{ $dueDateClass }}" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
                 @endif
             </div>
 
