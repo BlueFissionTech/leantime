@@ -92,7 +92,9 @@
                         <form class="tw-flex tw-flex-row tw-items-center tw-gap-2"
                               hx-post="{{ BASE_URL }}/hx/widgets/myToDos/updateTitle"
                               hx-target=".ticket-headline-{{ $ticket['id'] }}"
-                              onsubmit="jQuery(this).closest('.edit-form').find('.cancel-edit-task').click();"
+                              hx-swap="innerHTML"
+                              hx-indicator=".htmx-indicator-ticket-{{$ticket['id']}}"
+                              hx-on::after-request="if (event.detail.successful) { const title = this.closest('.ticket-title'); title.querySelector('.title-text').style.display = ''; title.querySelector('.edit-form').style.display = 'none'; }"
                         >
                             <input type="hidden" name="id" value="{{ $ticket['id'] }}"/>
                             <div>
