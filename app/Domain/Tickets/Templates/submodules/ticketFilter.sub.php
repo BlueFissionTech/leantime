@@ -16,7 +16,7 @@ $taskToggle = $tpl->get('enableTaskTypeToggle');
 <form action="" method="get" id="ticketSearch">
 
     <input type="hidden" value="1" name="search"/>
-    <input type="hidden" value="<?php echo session('currentProject'); ?>" name="projectId" id="projectIdInput"/>
+    <input type="hidden" value="<?php echo $searchCriteria['currentProject'] === '' ? 'all' : session('currentProject'); ?>" name="projectId" id="projectIdInput"/>
 
     <div class="filterWrapper" style="display:inline-block; position:relative; vertical-align: bottom; margin-bottom:20px;">
         <a onclick="leantime.ticketsController.toggleFilterBar();" style="margin-right:5px;"
@@ -64,6 +64,20 @@ $taskToggle = $tpl->get('enableTaskTypeToggle');
                 <?php $tpl->dispatchTplEvent('filters.beforeFirstBarField'); ?>
 
                 <div class="">
+                    <label class="inline"><?= $tpl->__('label.project') ?></label>
+                    <div class="form-group">
+                        <span class="checkbox">
+                            <input
+                                type="checkbox"
+                                id="allProjectsToggle"
+                                <?= $searchCriteria['currentProject'] === '' ? "checked='checked'" : '' ?>
+                            />
+                            <label for="allProjectsToggle">Search all accessible projects</label>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="">
                     <label class="inline"><?= $tpl->__('label.user') ?></label>
                     <div class="form-group">
                         <select data-placeholder="<?= $tpl->__('input.placeholders.filter_by_user') ?>"  title="<?= $tpl->__('input.placeholders.filter_by_user') ?>" name="users" multiple="multiple" class="user-select" id="userSelect">
@@ -92,11 +106,16 @@ $taskToggle = $tpl->get('enableTaskTypeToggle');
                                 foreach ($tpl->get('milestones') as $milestoneRow) {   ?>
                                     <?php echo "<option value='".$milestoneRow->id."'";
 
-                                    if (isset($searchCriteria['milestone']) && ($searchCriteria['milestone'] == $milestoneRow->id) && array_search($milestoneRow->id, explode(',', $searchCriteria['milestone'])) !== false) {
+                                    if (isset($searchCriteria['milestone']) && array_search((string) $milestoneRow->id, explode(',', $searchCriteria['milestone']), true) !== false) {
                                         echo " selected='selected' ";
                                     }
 
-                                    echo '>'.$tpl->escape($milestoneRow->headline).'</option>'; ?>
+                                    $milestoneLabel = $tpl->escape($milestoneRow->headline);
+                                    if ($searchCriteria['currentProject'] === '' && isset($milestoneRow->projectName) && $milestoneRow->projectName !== '') {
+                                        $milestoneLabel = $tpl->escape($milestoneRow->projectName).' / '.$milestoneLabel;
+                                    }
+
+                                    echo '>'.$milestoneLabel.'</option>'; ?>
 
                                 <?php }
                                 }?>
@@ -174,7 +193,7 @@ $taskToggle = $tpl->get('enableTaskTypeToggle');
                         <input type="text" name="termInput" id="termInput"
                         style="width: 230px"
                         value="<?= $searchCriteria['term']?>"
-                        placeholder="<?= $tpl->__('label.search_term')?>">
+                        placeholder="Tasks, people, projects, milestones">
                     </div>
                 </div>
 
@@ -241,6 +260,12 @@ $taskToggle = $tpl->get('enableTaskTypeToggle');
                 placeholderText: 'All Statuses',
             },
         });
+
+        jQuery('#allProjectsToggle').on('change', function () {
+            var useAllProjects = jQuery(this).is(':checked');
+            jQuery('#projectIdInput').val(useAllProjects ? 'all' : '<?= session('currentProject'); ?>');
+            jQuery('#milestoneSelect').prop('disabled', useAllProjects);
+        }).trigger('change');
 
         leantime.ticketsController.initTicketSearchSubmit('<?= $currentUrlPath; ?>');
 
