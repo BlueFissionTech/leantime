@@ -4,6 +4,7 @@ namespace Leantime\Domain\Widgets\Hxcontrollers;
 
 use Leantime\Core\Controller\HtmxController;
 use Leantime\Domain\Calendar\Repositories\Calendar as CalendarRepository;
+use Leantime\Domain\Comments\Services\Comments;
 use Leantime\Domain\Menu\Services\Menu;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Reports\Services\Reports as ReportService;
@@ -30,6 +31,8 @@ class MyProjects extends HtmxController
 
     private CalendarRepository $calendarRepo;
 
+    private Comments $commentsService;
+
     private Menu $menuService;
 
     /**
@@ -46,6 +49,7 @@ class MyProjects extends HtmxController
         ReportService $reportsService,
         SettingRepository $settingRepo,
         CalendarRepository $calendarRepo,
+        Comments $commentsService,
         Menu $menuService
     ) {
         $this->projectsService = $projectsService;
@@ -55,6 +59,7 @@ class MyProjects extends HtmxController
         $this->reportsService = $reportsService;
         $this->settingRepo = $settingRepo;
         $this->calendarRepo = $calendarRepo;
+        $this->commentsService = $commentsService;
         $this->menuService = $menuService;
 
         session(['lastPage' => BASE_URL.'/dashboard/home']);
@@ -83,6 +88,14 @@ class MyProjects extends HtmxController
                 if ($clientId == '' || $project['clientId'] == $clientId) {
                     $projectResults[$i] = $project;
                     $projectResults[$i]['progress'] = $this->projectsService->getProjectProgress($project['id']);
+                    $projectResults[$i]['team'] = $this->projectsService->getUsersAssignedToProject($project['id']);
+
+                    $projectComment = $this->commentsService->getComments('project', $project['id']);
+                    $projectResults[$i]['status'] = (
+                        is_array($projectComment)
+                        && count($projectComment) > 0
+                        && isset($projectComment[0]['status'])
+                    ) ? $projectComment[0]['status'] : '';
 
                     $fullReport = $this->reportsService->getRealtimeReport($project['id'], '');
 

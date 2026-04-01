@@ -384,43 +384,52 @@
 
         function initAddTaskBtns() {
             // Show the quick add form when the + button is clicked
-            jQuery('.add-task-button').on('click', function () {
+            jQuery(document)
+                .off('click.todoQuickAdd', '#yourToDoContainer .add-task-button')
+                .on('click.todoQuickAdd', '#yourToDoContainer .add-task-button', function () {
                 var groupKey = jQuery(this).data('group');
                 jQuery('#quickAddForm-' + groupKey).show();
                 jQuery('#quickAddForm-' + groupKey + ' .main-title-input').focus();
             });
 
             // Hide the quick add form when cancel is clicked
-            jQuery('.cancel-add-task').on('click', function () {
+            jQuery(document)
+                .off('click.todoQuickAdd', '#yourToDoContainer .cancel-add-task')
+                .on('click.todoQuickAdd', '#yourToDoContainer .cancel-add-task', function () {
                 var groupKey = jQuery(this).data('group');
                 jQuery('#quickAddForm-' + groupKey).hide();
                 jQuery('#quickAddForm-' + groupKey + ' .main-title-input').val('');
                 jQuery('#quickAddForm-' + groupKey + ' .description-input').val('');
             });
 
-            jQuery('.ticket-title').each(function(){
-
-                let currentTitle = jQuery(this);
-                jQuery(this).hover(function () {
-                    jQuery(this).find(".edit-button").show();
-                },
-                    function(){
-                        jQuery(this).find(".edit-button").hide();
-
+            jQuery(document)
+                .off('mouseenter.todoTitleEdit mouseleave.todoTitleEdit', '#yourToDoContainer .ticket-title')
+                .on('mouseenter.todoTitleEdit', '#yourToDoContainer .ticket-title', function () {
+                    jQuery(this).find('.edit-button').show();
+                })
+                .on('mouseleave.todoTitleEdit', '#yourToDoContainer .ticket-title', function () {
+                    jQuery(this).find('.edit-button').hide();
                 });
 
-                jQuery(this).find(".edit-button").click(function() {
-                    currentTitle.find(".edit-button").hide();
+            jQuery(document)
+                .off('click.todoTitleEdit', '#yourToDoContainer .ticket-title .edit-button')
+                .on('click.todoTitleEdit', '#yourToDoContainer .ticket-title .edit-button', function (e) {
+                    e.preventDefault();
+                    let currentTitle = jQuery(this).closest('.ticket-title');
+                    currentTitle.find('.edit-button').hide();
                     currentTitle.find('.title-text').hide();
                     currentTitle.find('.edit-form').show();
+                    currentTitle.find('.edit-form input[name="headline"]').trigger('focus').select();
                 });
 
-                jQuery(this).find(".edit-form .cancel-edit-task").click(function() {
+            jQuery(document)
+                .off('click.todoTitleEdit', '#yourToDoContainer .ticket-title .cancel-edit-task')
+                .on('click.todoTitleEdit', '#yourToDoContainer .ticket-title .cancel-edit-task', function (e) {
+                    e.preventDefault();
+                    let currentTitle = jQuery(this).closest('.ticket-title');
                     currentTitle.find('.title-text').show();
                     currentTitle.find('.edit-form').hide();
                 });
-
-            });
 
         }
 
