@@ -40,14 +40,20 @@
 
             @if($type != "simple")
                 <div id="projectProgressBox-{{ $project['id'] }}"
-                    hx-get="{{ BASE_URL }}/hx/projects/projectCardProgress/getProgress?pId={{ $project['id'] }}"
-                    hx-trigger="load"
-                    hx-swap="innerHTML"
-                    hx-target="#projectProgressBox-{{ $project['id'] }}"
-                    hx-indicator=".htmx-indicator">
-                    <div class="htmx-indicator">
-                        <x-global::loadingText type="card" count="1" />
-                    </div>
+                >
+                    @if(isset($project['progress'], $project['team']) && array_key_exists('status', $project))
+                        @include('projects::partials.projectCardProgressBar', ['project' => $project])
+                    @else
+                        <div hx-get="{{ BASE_URL }}/hx/projects/projectCardProgress/getProgress?pId={{ $project['id'] }}"
+                             hx-trigger="revealed once"
+                             hx-swap="innerHTML"
+                             hx-target="#projectProgressBox-{{ $project['id'] }}"
+                             hx-indicator="#projectProgressBox-{{ $project['id'] }} .project-card-indicator">
+                            <div class="project-card-indicator htmx-indicator">
+                                <x-global::loadingText type="card" count="1" />
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 

@@ -472,7 +472,7 @@ class MyToDos extends HtmxController
                 $this->tpl->setNotification($this->language->__('notifications.title_update_error'), 'error');
             }
 
-            return $this->tpl->displayRaw("{$headline}");
+            return $this->tpl->displayRaw(htmlspecialchars((string) $headline, ENT_QUOTES, 'UTF-8'));
         }
     }
 
