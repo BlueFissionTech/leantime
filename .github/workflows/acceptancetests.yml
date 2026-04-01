@@ -3,9 +3,9 @@ name: Acceptance Tests (Selenium)
 on:
   workflow_dispatch:
   push:
-    branches: [ "master", "*.*-dev" ]
+    branches: [ "master", "staging", "*.*-dev" ]
   pull_request:
-    branches: [ "master", "*.*-dev" ]
+    branches: [ "master", "staging", "*.*-dev" ]
 
 jobs:
   acceptance:
