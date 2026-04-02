@@ -727,6 +727,7 @@ class Template
     public function escapeMinimal(?string $content): string
     {
         $content = $this->convertRelativePaths($content);
+        $content = $this->normalizeLocalFilesGetUrls($content);
         $config = [
             'safe' => 1,
             'style_pass' => 1,
@@ -878,11 +879,68 @@ class Template
     public function patchDownloadUrlToFilenameOrAwsUrl(string $textHtml): string
     {
         $patchedTextHtml = $this->convertRelativePaths($textHtml);
-
-        // TO DO: Replace local files/get
-        $patchedTextHtml = $patchedTextHtml;
+        $patchedTextHtml = $this->normalizeLocalFilesGetUrls($patchedTextHtml);
 
         return $patchedTextHtml;
+    }
+
+    private function normalizeLocalFilesGetUrls(?string $content): string
+    {
+        if ($content === null || $content === '') {
+            return $content ?? '';
+        }
+
+        $baseUrl = rtrim((string) BASE_URL, '/');
+
+        $normalized = preg_replace_callback(
+            '/\b(?P<attr>href|src)\s*=\s*(?P<quote>[\'"])(?P<url>[^\'"]+)(?P=quote)/i',
+            function (array $matches) use ($baseUrl) {
+                $decodedUrl = html_entity_decode($matches['url'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+                if (! str_contains($decodedUrl, '/files/get?')) {
+                    return $matches[0];
+                }
+
+                $parts = parse_url($decodedUrl);
+
+                if ($parts === false) {
+                    return $matches[0];
+                }
+
+                $path = $parts['path'] ?? '';
+                if (! in_array($path, ['/files/get', 'files/get'], true)) {
+                    return $matches[0];
+                }
+
+                parse_str($parts['query'] ?? '', $queryParams);
+                if (
+                    ! isset($queryParams['encName'])
+                    || ! isset($queryParams['ext'])
+                    || ! isset($queryParams['realName'])
+                ) {
+                    return $matches[0];
+                }
+
+                $rewrittenUrl = $baseUrl.'/files/get';
+                $queryString = http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
+                if ($queryString !== '') {
+                    $rewrittenUrl .= '?'.$queryString;
+                }
+
+                if (isset($parts['fragment']) && $parts['fragment'] !== '') {
+                    $rewrittenUrl .= '#'.$parts['fragment'];
+                }
+
+                return $matches['attr']
+                    .'='
+                    .$matches['quote']
+                    .htmlspecialchars($rewrittenUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    .$matches['quote'];
+            },
+            $content
+        );
+
+        return $normalized ?? $content;
     }
 
     /**
