@@ -125,19 +125,19 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
                                 <input type="hidden" name="elevateGithub" value="1" />
                                 <div class="form-group">
                                     <label class="control-label" for="githubTitle">GitHub Title</label>
-                                    <input id="githubTitle" type="text" name="githubTitle" class="form-control" value="<?php echo $tpl->escape($tpl->get('defaultGithubTitle')); ?>" required />
+                                    <input id="githubTitle" type="text" name="githubTitle" class="form-control" style="width:100%; max-width:none;" value="<?php echo $tpl->escape($tpl->get('defaultGithubTitle')); ?>" required />
                                 </div>
                                 <div class="form-group">
                                     <label class="control-label" for="githubSummary">Technical Summary</label>
-                                    <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control" required><?php echo $tpl->escape($tpl->get('defaultGithubSummary')); ?></textarea>
+                                    <textarea id="githubSummary" name="githubSummary" rows="10" class="form-control" style="width:100%; max-width:none;" required><?php echo $tpl->escape($tpl->get('defaultGithubSummary')); ?></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label class="control-label" for="githubReproduction">Reproduction Notes</label>
-                                    <textarea id="githubReproduction" name="githubReproduction" rows="4" class="form-control"></textarea>
+                                    <textarea id="githubReproduction" name="githubReproduction" rows="6" class="form-control" style="width:100%; max-width:none;"></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label class="control-label" for="githubImpact">Impact</label>
-                                    <textarea id="githubImpact" name="githubImpact" rows="3" class="form-control"></textarea>
+                                    <textarea id="githubImpact" name="githubImpact" rows="5" class="form-control" style="width:100%; max-width:none;"></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Elevate to GitHub</button>
                             </form>

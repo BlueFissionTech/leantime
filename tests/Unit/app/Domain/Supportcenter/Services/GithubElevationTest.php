@@ -90,12 +90,12 @@ class GithubElevationTest extends TestCase
         $service = new GithubElevation($settings);
         $ticket = (object) [
             'headline' => 'Need multi-stop load support',
-            'description' => '<p>User should be able to add stops to a load.</p><p><strong>Many loads are more than 1 pick-1 drop.</strong></p>',
+            'description' => '<p>User should be able to add stops to a load.</p><p><strong>Many loads are more than 1 pick-1 drop.</strong></p><img src="https://support.example.com/files/get?module=project&amp;encName=abc123&amp;ext=png&amp;realName=Stops.png" alt="Stops screenshot">',
         ];
 
         $this->assertSame('Need multi-stop load support', $service->getDefaultGithubTitle($ticket));
         $this->assertSame(
-            "User should be able to add stops to a load.\nMany loads are more than 1 pick-1 drop.",
+            "User should be able to add stops to a load.\nMany loads are more than 1 pick-1 drop.\n\n![Stops screenshot](http://localhost/files/get?module=project&encName=abc123&ext=png&realName=Stops.png)",
             $service->getDefaultGithubSummary($ticket)
         );
     }

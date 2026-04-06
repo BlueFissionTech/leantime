@@ -24,12 +24,7 @@ class GithubElevation
             return '';
         }
 
-        $description = preg_replace('/<(br\s*\/?|\/p|\/div|\/li|\/h[1-6]|\/tr)>/i', "\n", $description) ?? $description;
-        $summary = html_entity_decode(strip_tags($description), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $summary = preg_replace("/\r\n?/", "\n", $summary) ?? $summary;
-        $summary = preg_replace("/\n{3,}/", "\n\n", $summary) ?? $summary;
-
-        return trim($summary);
+        return $this->convertHtmlToMarkdown($description);
     }
 
     public function getTicketGithubIssue(int $ticketId): array|false
@@ -195,6 +190,123 @@ class GithubElevation
         $parts[] = (string) ($ticket->headline ?? '');
 
         return implode("\n", $parts);
+    }
+
+    private function convertHtmlToMarkdown(string $html): string
+    {
+        $html = $this->normalizeLocalFilesGetUrls($html);
+        $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $html = preg_replace_callback('/<img\b[^>]*>/i', function (array $matches) {
+            $tag = $matches[0];
+            $src = $this->extractAttribute($tag, 'src');
+
+            if ($src === '') {
+                return '';
+            }
+
+            $alt = $this->extractAttribute($tag, 'alt');
+            $label = $alt !== '' ? $alt : 'Image';
+
+            return "\n![$label]($src)\n";
+        }, $html) ?? $html;
+
+        $html = preg_replace_callback('/<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', function (array $matches) {
+            $url = trim($matches[1]);
+            $text = trim($this->convertHtmlToPlainText($matches[2]));
+
+            if ($url === '') {
+                return $text;
+            }
+
+            if ($text === '' || $text === $url) {
+                return $url;
+            }
+
+            return "[$text]($url)";
+        }, $html) ?? $html;
+
+        $html = preg_replace('/<li\b[^>]*>/i', "\n- ", $html) ?? $html;
+        $html = preg_replace('/<(br\s*\/?|\/p|\/div|\/li|\/ul|\/ol|\/h[1-6]|\/tr)>/i', "\n", $html) ?? $html;
+
+        $markdown = strip_tags($html);
+        $markdown = preg_replace("/\r\n?/", "\n", $markdown) ?? $markdown;
+        $markdown = preg_replace("/[ \t]+\n/", "\n", $markdown) ?? $markdown;
+        $markdown = preg_replace("/\n{3,}/", "\n\n", $markdown) ?? $markdown;
+
+        return trim($markdown);
+    }
+
+    private function convertHtmlToPlainText(string $html): string
+    {
+        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace("/\s+/", ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
+    private function extractAttribute(string $tag, string $attribute): string
+    {
+        if (! preg_match('/\b'.preg_quote($attribute, '/').'\s*=\s*["\']([^"\']*)["\']/i', $tag, $matches)) {
+            return '';
+        }
+
+        return trim(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private function normalizeLocalFilesGetUrls(string $content): string
+    {
+        $baseUrl = rtrim((string) BASE_URL, '/');
+
+        $normalized = preg_replace_callback(
+            '/\b(?P<attr>href|src)\s*=\s*(?P<quote>[\'"])(?P<url>[^\'"]+)(?P=quote)/i',
+            function (array $matches) use ($baseUrl) {
+                $decodedUrl = html_entity_decode($matches['url'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+                if (! str_contains($decodedUrl, '/files/get?')) {
+                    return $matches[0];
+                }
+
+                $parts = parse_url($decodedUrl);
+
+                if ($parts === false) {
+                    return $matches[0];
+                }
+
+                $path = $parts['path'] ?? '';
+                if (! in_array($path, ['/files/get', 'files/get'], true)) {
+                    return $matches[0];
+                }
+
+                parse_str($parts['query'] ?? '', $queryParams);
+                if (
+                    ! isset($queryParams['encName'])
+                    || ! isset($queryParams['ext'])
+                    || ! isset($queryParams['realName'])
+                ) {
+                    return $matches[0];
+                }
+
+                $rewrittenUrl = $baseUrl.'/files/get';
+                $queryString = http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
+                if ($queryString !== '') {
+                    $rewrittenUrl .= '?'.$queryString;
+                }
+
+                if (isset($parts['fragment']) && $parts['fragment'] !== '') {
+                    $rewrittenUrl .= '#'.$parts['fragment'];
+                }
+
+                return $matches['attr']
+                    .'='
+                    .$matches['quote']
+                    .htmlspecialchars($rewrittenUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    .$matches['quote'];
+            },
+            $content
+        );
+
+        return $normalized ?? $content;
     }
 
     private function getSettingKey(int $ticketId): string
