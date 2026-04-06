@@ -11,7 +11,6 @@ use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
-use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Supportcenter\Services\GithubElevation;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
@@ -36,8 +35,8 @@ class ShowTicket extends Controller
 
     private UserService $userService;
 
-    private TicketdependencyService $ticketdependencyService;
     private GithubElevation $githubElevation;
+
     public function init(
         ProjectService $projectService,
         TicketService $ticketService,
@@ -46,7 +45,6 @@ class ShowTicket extends Controller
         CommentService $commentService,
         TimesheetService $timesheetService,
         UserService $userService,
-        TicketdependencyService $ticketdependencyService,
         GithubElevation $githubElevation
     ): void {
         $this->projectService = $projectService;
@@ -56,7 +54,6 @@ class ShowTicket extends Controller
         $this->commentService = $commentService;
         $this->timesheetService = $timesheetService;
         $this->userService = $userService;
-        $this->ticketdependencyService = $ticketdependencyService;
         $this->githubElevation = $githubElevation;
 
         if (session()->exists('lastPage') === false) {
