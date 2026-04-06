@@ -155,6 +155,8 @@ class ShowTicket extends Controller
         $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
         $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($id));
         $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
+        $this->tpl->assign('defaultGithubTitle', $this->githubElevation->getDefaultGithubTitle($ticket));
+        $this->tpl->assign('defaultGithubSummary', $this->githubElevation->getDefaultGithubSummary($ticket));
 
         $this->tpl->assign('timesheetValues', [
             'kind' => '',
