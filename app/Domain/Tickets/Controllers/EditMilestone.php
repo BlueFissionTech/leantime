@@ -10,6 +10,7 @@ use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Notifications\Models\Notification as NotificationModel;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Raci\Services\RaciAssignments;
 use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
@@ -25,6 +26,7 @@ class EditMilestone extends Controller
     private TicketRepository $ticketRepo;
 
     private ProjectRepository $projectRepo;
+    private RaciAssignments $raciAssignments;
 
     /**
      * init - initialize private variables
@@ -34,13 +36,15 @@ class EditMilestone extends Controller
         CommentService $commentsService,
         ProjectService $projectService,
         TicketRepository $ticketRepo,
-        ProjectRepository $projectRepo
+        ProjectRepository $projectRepo,
+        RaciAssignments $raciAssignments
     ) {
         $this->ticketService = $ticketService;
         $this->commentsService = $commentsService;
         $this->projectService = $projectService;
         $this->ticketRepo = $ticketRepo;
         $this->projectRepo = $projectRepo;
+        $this->raciAssignments = $raciAssignments;
     }
 
     /**
@@ -98,8 +102,14 @@ class EditMilestone extends Controller
 
         $allProjectMilestones = $this->ticketService->getAllMilestones(['sprint' => '', 'type' => 'milestone', 'currentProject' => session('currentProject')]);
         $this->tpl->assign('milestones', $allProjectMilestones);
-        $this->tpl->assign('users', $this->projectRepo->getUsersAssignedToProject(session('currentProject')));
+        $projectUsers = $this->projectRepo->getUsersAssignedToProject(session('currentProject'));
+        $this->tpl->assign('users', $projectUsers);
         $this->tpl->assign('milestone', $milestone);
+        $this->tpl->assign('milestoneRaci', isset($milestone->id) ? $this->raciAssignments->getMilestoneAssignments((int) $milestone->id) : []);
+        $this->tpl->assign('resolvedMilestoneRaci', $this->raciAssignments->toDisplayAssignments(
+            $this->raciAssignments->resolveForMilestone($milestone),
+            $projectUsers
+        ));
 
         return $this->tpl->displayPartial('tickets.milestoneDialog');
     }
@@ -155,6 +165,7 @@ class EditMilestone extends Controller
 
             if (isset($params['headline']) === true) {
                 if ($this->ticketService->quickUpdateMilestone($params)) {
+                    $this->raciAssignments->saveMilestoneAssignments((int) $params['id'], $params);
                     $this->tpl->setNotification($this->language->__('notification.milestone_edited_successfully'), 'success');
 
                     $subject = $this->language->__('email_notifications.milestone_update_subject');
@@ -188,6 +199,7 @@ class EditMilestone extends Controller
 
             if (is_numeric($result)) {
                 $params['id'] = $result;
+                $this->raciAssignments->saveMilestoneAssignments((int) $result, $params);
 
                 $this->tpl->setNotification($this->language->__('notification.milestone_created_successfully'), 'success');
 

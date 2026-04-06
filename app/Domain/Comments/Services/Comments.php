@@ -108,7 +108,12 @@ class Comments
             'text' => $linkLabel,
         ];
 
-        $notification->entity = $mapper;
+        $notification->entity = array_merge($mapper, [
+            'contextModule' => $module,
+            'contextId' => (int) $entityId,
+            'projectId' => (int) (($entity->projectId ?? session('currentProject')) ?? -1),
+            'type' => is_object($entity) ? ($entity->type ?? '') : ($entity['type'] ?? ''),
+        ]);
         $notification->module = 'comments';
         $notification->action = 'commented';
         $notification->projectId = (($entity->projectId ?? session('currentProject')) ?? -1);

@@ -20,6 +20,7 @@ use Leantime\Domain\Goalcanvas\Services\Goalcanvas;
 use Leantime\Domain\Notifications\Models\Notification as NotificationModel;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Raci\Services\RaciAssignments;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
 use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
@@ -68,7 +69,8 @@ class Tickets
         private SprintService $sprintService,
         private TicketHistory $ticketHistoryRepo,
         private Goalcanvas $goalcanvasService,
-        private DateTimeHelper $dateTimeHelper
+        private DateTimeHelper $dateTimeHelper,
+        private RaciAssignments $raciAssignments
     ) {}
 
     /**
@@ -1858,6 +1860,10 @@ class Tickets
             'milestoneid' => isset($params['milestone']) ? (int) $params['milestone'] : '',
             'dependingTicketId' => isset($params['dependingTicketId']) ? (int) $params['dependingTicketId'] : '',
             'sortIndex' => $params['sortIndex'] ?? '',
+            'raciResponsible' => $params['raciResponsible'] ?? [],
+            'raciAccountable' => $params['raciAccountable'] ?? [],
+            'raciConsulted' => $params['raciConsulted'] ?? [],
+            'raciInformed' => $params['raciInformed'] ?? [],
         ];
 
         if ($values['headline'] == '') {
@@ -1872,6 +1878,7 @@ class Tickets
 
         if ($result > 0) {
             $values['id'] = $result;
+            $this->raciAssignments->saveTicketAssignments((int) $result, $params);
             $actual_link = BASE_URL.'/dashboard/home#/tickets/showTicket/'.$result;
             $message = sprintf($this->language->__('email_notifications.new_todo_message'), session('userdata.name'), strip_tags($params['headline']));
             $subject = $this->language->__('email_notifications.new_todo_subject');
@@ -2015,6 +2022,10 @@ class Tickets
             'dependingTicketId' => $values['dependingTicketId'] ?? '',
             'milestoneid' => $values['milestoneid'] ?? '',
             'collaborators' => $values['collaborators'] ?? [],
+            'raciResponsible' => $values['raciResponsible'] ?? [],
+            'raciAccountable' => $values['raciAccountable'] ?? [],
+            'raciConsulted' => $values['raciConsulted'] ?? [],
+            'raciInformed' => $values['raciInformed'] ?? [],
         ];
 
         if (! $this->projectService->isUserAssignedToProject(session('userdata.id'), $values['projectId'])) {
@@ -2033,6 +2044,7 @@ class Tickets
 
             if ($addTicketResponse !== false) {
                 $values['id'] = $addTicketResponse;
+                $this->raciAssignments->saveTicketAssignments((int) $addTicketResponse, $values);
                 $subject = sprintf($this->language->__('email_notifications.new_todo_subject'), $addTicketResponse, strip_tags($values['headline']));
                 $actual_link = BASE_URL.'/dashboard/home#/tickets/showTicket/'.$addTicketResponse;
                 $message = sprintf($this->language->__('email_notifications.new_todo_message'), session('userdata.name'), strip_tags($values['headline']));
@@ -2130,6 +2142,10 @@ class Tickets
             'collaborators' => $values['collaborators'] ?? [],
             'dependencyTicketIds' => $values['dependencyTicketIds'] ?? [],
             'autoRescheduleDependencies' => (int) ($values['autoRescheduleDependencies'] ?? 0),
+            'raciResponsible' => $values['raciResponsible'] ?? [],
+            'raciAccountable' => $values['raciAccountable'] ?? [],
+            'raciConsulted' => $values['raciConsulted'] ?? [],
+            'raciInformed' => $values['raciInformed'] ?? [],
         ];
 
         if ($values['projectId'] === null || $values['projectId'] === '' || $values['projectId'] === false) {
@@ -2164,6 +2180,7 @@ class Tickets
 
         // Update Ticket
         if ($this->ticketRepository->updateTicket($values, $values['id']) === true) {
+            $this->raciAssignments->saveTicketAssignments((int) $values['id'], $values);
             $ticketdependencyService->syncDependencies(
                 (int) $values['id'],
                 $values['dependencyTicketIds'],
@@ -2388,9 +2405,11 @@ class Tickets
 
         if ($subtaskId == 'new' || $subtaskId == '') {
             // New Ticket
-            if (! $this->ticketRepository->addTicket($values)) {
+            $newSubtaskId = $this->ticketRepository->addTicket($values);
+            if (! $newSubtaskId) {
                 return false;
             }
+            $this->raciAssignments->saveTicketAssignments((int) $newSubtaskId, $values);
 
             self::dispatchEvent('ticket_created');
 
@@ -2400,6 +2419,7 @@ class Tickets
             if (! $this->ticketRepository->updateTicket($values, $subtaskId)) {
                 return false;
             }
+            $this->raciAssignments->saveTicketAssignments((int) $subtaskId, $values);
 
             self::dispatchEvent('ticket_updated');
         }
