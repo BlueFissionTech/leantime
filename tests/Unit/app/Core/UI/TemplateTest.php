@@ -42,4 +42,16 @@ class TemplateTest extends TestCase
             $result
         );
     }
+
+    public function test_patch_download_url_to_filename_or_aws_url_rewrites_local_files_get_urls_to_current_base_url(): void
+    {
+        $content = '<img src="https://support.example.com/files/get?module=project&amp;encName=abc123&amp;ext=png&amp;realName=Example%20Image.png" alt="Example" />';
+
+        $result = $this->template->patchDownloadUrlToFilenameOrAwsUrl($content);
+
+        $this->assertStringContainsString(
+            'src="http://localhost/files/get?module=project&amp;encName=abc123&amp;ext=png&amp;realName=Example%20Image.png"',
+            $result
+        );
+    }
 }
