@@ -2797,7 +2797,15 @@ class Tickets
         $currentSprint = $this->sprintService->getCurrentSprintId((int) session('currentProject'));
 
         $searchCriteria = $this->prepareTicketSearchArray($params);
-        $searchCriteria['orderBy'] = 'kanbansort';
+
+        if (
+            ! isset($params['orderBy'])
+            || $params['orderBy'] === ''
+            || $params['orderBy'] === 'sortIndex'
+            || $params['orderBy'] === 'kanbansort'
+        ) {
+            $searchCriteria['orderBy'] = 'duedate';
+        }
 
         $allTickets = $this->getAllGrouped($searchCriteria);
         $allTicketStates = $this->getStatusLabels();

@@ -207,6 +207,14 @@ $allTickets = $group['items'];
 
                                     <?php foreach ($allTickets as $row) { ?>
                                         <?php if ($row['status'] == $key) {?>
+                                        <?php
+                                            $dueDateAlert = app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
+                                            $dueDateClass = match ($dueDateAlert) {
+                                                'overdue' => 'ticket-due-date ticket-due-date--overdue',
+                                                'dueSoon' => 'ticket-due-date ticket-due-date--soon',
+                                                default => 'ticket-due-date',
+                                            };
+                                        ?>
                                         <div class="ticketBox moveable container priority-border-<?= $row['priority']?>" id="ticket_<?php echo $row['id']; ?>">
 
                                             <div class="row" >
@@ -235,9 +243,9 @@ $allTickets = $group['items'];
                                                     </div>
                                                     <div class="tw-flex">
                                                     <?php if ($row['dateToFinish'] != '0000-00-00 00:00:00' && $row['dateToFinish'] != '1969-12-31 00:00:00') { ?>
-                                                        <div>
+                                                        <div class="<?= $dueDateClass ?>">
                                                             <?php echo $tpl->__('label.due_icon'); ?>
-                                                            <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo format($row['dateToFinish'])->date() ?>" class="duedates secretInput" style="margin-left:0px;" data-id="<?php echo $row['id']; ?>" name="date" />
+                                                            <input type="text" title="<?php echo $tpl->__('label.due'); ?>" value="<?php echo format($row['dateToFinish'])->date() ?>" class="duedates secretInput <?= $dueDateClass ?>" style="margin-left:0px;" data-id="<?php echo $row['id']; ?>" name="date" />
                                                         </div>
                                                         <div>
                                                             <?php $tpl->dispatchTplEvent('afterDates', ['ticket' => $row]); ?>
