@@ -60,6 +60,26 @@ class Files
         return $result ? (array) $result : false;
     }
 
+    public function findFileByEncodedName(string $encName, string $extension): array|false
+    {
+        $result = $this->db->table('zp_file as file')
+            ->select(
+                'file.id',
+                'file.extension',
+                'file.realName',
+                'file.encName',
+                'file.date',
+                'file.module',
+                'file.moduleId',
+                'file.userId'
+            )
+            ->where('file.encName', $encName)
+            ->where('file.extension', $extension)
+            ->first();
+
+        return $result ? (array) $result : false;
+    }
+
     public function getFiles(int $userId = 0): false|array
     {
         $query = $this->db->table('zp_file as file')
