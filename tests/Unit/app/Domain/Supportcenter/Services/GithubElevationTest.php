@@ -5,18 +5,32 @@ namespace Unit\app\Domain\Supportcenter\Services;
 require_once __DIR__.'/../../../../../../app/Domain/Supportcenter/Services/GithubElevation.php';
 
 use Illuminate\Support\Facades\Http;
+use Leantime\Core\Files\FileManager;
+use Leantime\Domain\Files\Repositories\Files as FileRepository;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Supportcenter\Services\GithubElevation;
 use Unit\TestCase;
 
 class GithubElevationTest extends TestCase
 {
+    private function makeService(
+        ?SettingRepository $settings = null,
+        ?FileRepository $fileRepository = null,
+        ?FileManager $fileManager = null,
+    ): GithubElevation {
+        return new GithubElevation(
+            $settings ?? $this->createMock(SettingRepository::class),
+            $fileRepository ?? $this->createMock(FileRepository::class),
+            $fileManager ?? $this->createMock(FileManager::class),
+        );
+    }
+
     public function test_it_returns_false_when_no_github_issue_exists(): void
     {
         $settings = $this->createMock(SettingRepository::class);
         $settings->method('getSetting')->willReturn(false);
 
-        $service = new GithubElevation($settings);
+        $service = $this->makeService($settings);
 
         $this->assertFalse($service->getTicketGithubStatus(123));
     }
@@ -28,7 +42,7 @@ class GithubElevationTest extends TestCase
             'state' => 'open',
         ]));
 
-        $service = new GithubElevation($settings);
+        $service = $this->makeService($settings);
 
         $this->assertSame([
             'status' => 'Backlog',
@@ -44,7 +58,7 @@ class GithubElevationTest extends TestCase
             'state' => 'closed',
         ]));
 
-        $service = new GithubElevation($settings);
+        $service = $this->makeService($settings);
 
         $this->assertSame([
             'status' => 'Done',
@@ -73,7 +87,7 @@ class GithubElevationTest extends TestCase
         $settings = $this->createMock(SettingRepository::class);
         $settings->method('getSetting')->willReturn(false);
 
-        $service = new GithubElevation($settings);
+        $service = $this->makeService($settings);
         $result = $service->createGithubIssue(123, (object) ['headline' => 'Sample'], [
             'githubTitle' => 'Sample title',
             'githubSummary' => 'Sample summary',
@@ -82,5 +96,30 @@ class GithubElevationTest extends TestCase
         $this->assertFalse($result['ok']);
         $this->assertStringContainsString('GitHub repository BlueFissionTech/morpro is not visible to the configured token.', $result['message']);
         $this->assertStringContainsString('REQ123', $result['message']);
+    }
+
+    public function test_it_builds_default_title_and_markdown_summary_with_direct_file_urls(): void
+    {
+        $settings = $this->createMock(SettingRepository::class);
+        $fileRepository = $this->createMock(FileRepository::class);
+        $fileManager = $this->createMock(FileManager::class);
+        $fileRepository->method('findFileByEncodedName')->with('abc123', 'png')->willReturn([
+            'encName' => 'abc123',
+            'extension' => 'png',
+            'realName' => 'Stops.png',
+        ]);
+        $fileManager->method('getFileUrl')->with('abc123.png')->willReturn('https://s3.example.com/files/abc123.png?signature=xyz');
+
+        $service = $this->makeService($settings, $fileRepository, $fileManager);
+        $ticket = (object) [
+            'headline' => 'Need multi-stop load support',
+            'description' => '<p>User should be able to add stops to a load.</p><p><strong>Many loads are more than 1 pick-1 drop.</strong></p><img src="https://support.example.com/files/get?module=project&amp;encName=abc123&amp;ext=png&amp;realName=Stops.png" alt="Stops screenshot">',
+        ];
+
+        $this->assertSame('Need multi-stop load support', $service->getDefaultGithubTitle($ticket));
+        $this->assertSame(
+            "User should be able to add stops to a load.\nMany loads are more than 1 pick-1 drop.\n\n![Stops screenshot](https://s3.example.com/files/abc123.png?signature=xyz)",
+            $service->getDefaultGithubSummary($ticket)
+        );
     }
 }
