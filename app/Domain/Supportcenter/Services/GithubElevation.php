@@ -11,6 +11,27 @@ class GithubElevation
         private SettingRepository $settingRepository,
     ) {}
 
+    public function getDefaultGithubTitle(object $ticket): string
+    {
+        return trim((string) ($ticket->headline ?? ''));
+    }
+
+    public function getDefaultGithubSummary(object $ticket): string
+    {
+        $description = trim((string) ($ticket->description ?? ''));
+
+        if ($description === '') {
+            return '';
+        }
+
+        $description = preg_replace('/<(br\s*\/?|\/p|\/div|\/li|\/h[1-6]|\/tr)>/i', "\n", $description) ?? $description;
+        $summary = html_entity_decode(strip_tags($description), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $summary = preg_replace("/\r\n?/", "\n", $summary) ?? $summary;
+        $summary = preg_replace("/\n{3,}/", "\n\n", $summary) ?? $summary;
+
+        return trim($summary);
+    }
+
     public function getTicketGithubIssue(int $ticketId): array|false
     {
         $value = $this->settingRepository->getSetting($this->getSettingKey($ticketId), false);
@@ -61,6 +82,14 @@ class GithubElevation
         $summary = trim((string) ($payload['githubSummary'] ?? ''));
         $reproduction = trim((string) ($payload['githubReproduction'] ?? ''));
         $impact = trim((string) ($payload['githubImpact'] ?? ''));
+
+        if ($title === '') {
+            $title = $this->getDefaultGithubTitle($ticket);
+        }
+
+        if ($summary === '') {
+            $summary = $this->getDefaultGithubSummary($ticket);
+        }
 
         if ($title === '' || $summary === '') {
             return ['ok' => false, 'message' => 'GitHub title and technical summary are required.'];

@@ -83,4 +83,20 @@ class GithubElevationTest extends TestCase
         $this->assertStringContainsString('GitHub repository BlueFissionTech/morpro is not visible to the configured token.', $result['message']);
         $this->assertStringContainsString('REQ123', $result['message']);
     }
+
+    public function test_it_builds_default_title_and_plain_text_summary_from_ticket_content(): void
+    {
+        $settings = $this->createMock(SettingRepository::class);
+        $service = new GithubElevation($settings);
+        $ticket = (object) [
+            'headline' => 'Need multi-stop load support',
+            'description' => '<p>User should be able to add stops to a load.</p><p><strong>Many loads are more than 1 pick-1 drop.</strong></p>',
+        ];
+
+        $this->assertSame('Need multi-stop load support', $service->getDefaultGithubTitle($ticket));
+        $this->assertSame(
+            "User should be able to add stops to a load.\nMany loads are more than 1 pick-1 drop.",
+            $service->getDefaultGithubSummary($ticket)
+        );
+    }
 }

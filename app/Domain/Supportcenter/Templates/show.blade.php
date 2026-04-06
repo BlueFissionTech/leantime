@@ -45,11 +45,11 @@
                 <form method="post" action="{{ BASE_URL }}/support-center/{{ $ticket->id }}/elevate-github?projectId={{ $ticket->projectId }}">
                     <div class="form-group">
                         <label for="githubTitle">GitHub Title</label>
-                        <input id="githubTitle" type="text" name="githubTitle" class="form-control" required />
+                        <input id="githubTitle" type="text" name="githubTitle" class="form-control" value="{{ $defaultGithubTitle }}" required />
                     </div>
                     <div class="form-group">
                         <label for="githubSummary">Technical Summary</label>
-                        <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control tiptapComplex" required></textarea>
+                        <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control tiptapComplex" required>{{ $defaultGithubSummary }}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="githubReproduction">Reproduction Notes</label>

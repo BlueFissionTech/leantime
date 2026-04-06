@@ -125,11 +125,11 @@ $todoTypeIcons = $tpl->get('ticketTypeIcons');
                                 <input type="hidden" name="elevateGithub" value="1" />
                                 <div class="form-group">
                                     <label class="control-label" for="githubTitle">GitHub Title</label>
-                                    <input id="githubTitle" type="text" name="githubTitle" class="form-control" required />
+                                    <input id="githubTitle" type="text" name="githubTitle" class="form-control" value="<?php echo $tpl->escape($tpl->get('defaultGithubTitle')); ?>" required />
                                 </div>
                                 <div class="form-group">
                                     <label class="control-label" for="githubSummary">Technical Summary</label>
-                                    <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control" required></textarea>
+                                    <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control" required><?php echo $tpl->escape($tpl->get('defaultGithubSummary')); ?></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label class="control-label" for="githubReproduction">Reproduction Notes</label>
