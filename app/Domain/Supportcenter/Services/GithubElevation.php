@@ -3,12 +3,16 @@
 namespace Leantime\Domain\Supportcenter\Services;
 
 use Illuminate\Support\Facades\Http;
+use Leantime\Core\Files\FileManager;
+use Leantime\Domain\Files\Repositories\Files as FileRepository;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 
 class GithubElevation
 {
     public function __construct(
         private SettingRepository $settingRepository,
+        private FileRepository $fileRepository,
+        private FileManager $fileManager,
     ) {}
 
     public function getDefaultGithubTitle(object $ticket): string
@@ -205,25 +209,33 @@ class GithubElevation
                 return '';
             }
 
+            $resolvedSrc = $this->resolveDirectFileUrl($src);
             $alt = $this->extractAttribute($tag, 'alt');
             $label = $alt !== '' ? $alt : 'Image';
 
-            return "\n![$label]($src)\n";
+            if ($resolvedSrc === false) {
+                return "\n[$label]($src)\n";
+            }
+
+            return "\n![$label]($resolvedSrc)\n";
         }, $html) ?? $html;
 
         $html = preg_replace_callback('/<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', function (array $matches) {
             $url = trim($matches[1]);
+            $resolvedUrl = $this->resolveDirectFileUrl($url);
             $text = trim($this->convertHtmlToPlainText($matches[2]));
 
             if ($url === '') {
                 return $text;
             }
 
-            if ($text === '' || $text === $url) {
-                return $url;
+            $finalUrl = $resolvedUrl !== false ? $resolvedUrl : $url;
+
+            if ($text === '' || $text === $finalUrl) {
+                return $finalUrl;
             }
 
-            return "[$text]($url)";
+            return "[$text]($finalUrl)";
         }, $html) ?? $html;
 
         $html = preg_replace('/<li\b[^>]*>/i', "\n- ", $html) ?? $html;
@@ -307,6 +319,65 @@ class GithubElevation
         );
 
         return $normalized ?? $content;
+    }
+
+    private function resolveDirectFileUrl(string $url): string|false
+    {
+        $decodedUrl = html_entity_decode(trim($url), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if ($decodedUrl === '' || ! str_contains($decodedUrl, '/files/get?')) {
+            return $this->normalizeAbsoluteUrl($decodedUrl);
+        }
+
+        $parts = parse_url($decodedUrl);
+
+        if ($parts === false) {
+            return false;
+        }
+
+        $path = $parts['path'] ?? '';
+        if (! in_array($path, ['/files/get', 'files/get'], true)) {
+            return $this->normalizeAbsoluteUrl($decodedUrl);
+        }
+
+        parse_str($parts['query'] ?? '', $queryParams);
+        $encName = trim((string) ($queryParams['encName'] ?? ''));
+        $extension = trim((string) ($queryParams['ext'] ?? ''));
+
+        if ($encName === '' || $extension === '') {
+            return false;
+        }
+
+        $file = $this->fileRepository->findFileByEncodedName($encName, $extension);
+
+        if ($file === false) {
+            return false;
+        }
+
+        $fileUrl = $this->fileManager->getFileUrl($encName.'.'.$extension);
+
+        if (! is_string($fileUrl) || $fileUrl === '') {
+            return false;
+        }
+
+        return $this->normalizeAbsoluteUrl($fileUrl);
+    }
+
+    private function normalizeAbsoluteUrl(string $url): string|false
+    {
+        if ($url === '') {
+            return false;
+        }
+
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '/')) {
+            return rtrim((string) BASE_URL, '/').$url;
+        }
+
+        return rtrim((string) BASE_URL, '/').'/'.$url;
     }
 
     private function getSettingKey(int $ticketId): string

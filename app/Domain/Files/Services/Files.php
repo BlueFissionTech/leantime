@@ -36,7 +36,7 @@ class Files
         return $this->fileRepository->getFilesByModule($module, $entityId, $userId);
     }
 
-    public function getFile(int $fileId): false|array
+    public function getFile(int $fileId): array|false
     {
         return $this->fileRepository->getFile($fileId);
     }
@@ -167,7 +167,6 @@ class Files
 
         return $updates;
     }
-
     public function getFilePathById($fileId): false|string
     {
         $dbReference = $this->fileRepository->getFile($fileId);

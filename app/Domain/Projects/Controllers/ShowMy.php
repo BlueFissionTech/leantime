@@ -72,6 +72,16 @@ class ShowMy extends Controller
 
                 if ($clientId == '' || $project['clientId'] == $clientId) {
                     $projectResults[$i] = $project;
+                    $projectResults[$i]['progress'] = $this->projectService->getProjectProgress($project['id']);
+                    $projectResults[$i]['team'] = $this->projectService->getUsersAssignedToProject($project['id']);
+
+                    $projectComment = $this->commentService->getComments('project', $project['id']);
+                    $projectResults[$i]['status'] = (
+                        is_array($projectComment)
+                        && count($projectComment) > 0
+                        && isset($projectComment[0]['status'])
+                    ) ? $projectComment[0]['status'] : '';
+
                     $i++;
                 }
             }
