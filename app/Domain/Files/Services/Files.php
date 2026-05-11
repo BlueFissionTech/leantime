@@ -36,6 +36,11 @@ class Files
         return $this->fileRepository->getFilesByModule($module, $entityId, $userId);
     }
 
+    public function getFile(int $fileId): array|false
+    {
+        return $this->fileRepository->getFile($fileId);
+    }
+
     /**
      * @throws BindingResolutionException
      *
@@ -142,11 +147,6 @@ class Files
     public function updateFile(int $fileId, array $values): bool
     {
         return $this->fileRepository->updateFile($fileId, $values);
-    }
-
-    public function getFile(int $fileId): array|false
-    {
-        return $this->fileRepository->getFile($fileId);
     }
 
     public function getApiMetadataUpdates(array $values): array

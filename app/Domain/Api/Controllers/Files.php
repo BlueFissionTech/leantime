@@ -29,7 +29,28 @@ class Files extends Controller
      */
     public function get(array $params): Response
     {
-        return $this->tpl->displayJson(['status' => 'Not implemented'], 501);
+        if (isset($params['id'])) {
+            $file = $this->fileService->getFile((int) $params['id']);
+
+            if ($file === false) {
+                return $this->tpl->displayJson(['status' => 'failure', 'error' => 'File not found'], 404);
+            }
+
+            return $this->tpl->displayJson(['status' => 'ok', 'result' => $file]);
+        }
+
+        if (isset($params['module'])) {
+            return $this->tpl->displayJson([
+                'status' => 'ok',
+                'result' => $this->fileService->getFilesByModule(
+                    (string) $params['module'],
+                    isset($params['moduleId']) ? (int) $params['moduleId'] : null,
+                    isset($params['userId']) ? (int) $params['userId'] : null
+                ),
+            ]);
+        }
+
+        return $this->tpl->displayJson(['status' => 'failure', 'error' => 'Missing file lookup parameter'], 400);
     }
 
     /**
@@ -42,10 +63,16 @@ class Files extends Controller
      */
     public function post(array $params): Response
     {
+        if (! AuthService::userIsAtLeast(Roles::$editor)) {
+            return $this->tpl->displayJson(['error' => 'Not Authorized'], 403);
+        }
+
         // FileUpload
-        if (isset($_FILES['file']) && isset($_GET['module']) && isset($_GET['moduleId'])) {
-            $module = htmlentities($_GET['module']);
-            $id = (int) $_GET['moduleId'];
+        $module = $params['module'] ?? $_GET['module'] ?? null;
+        $id = isset($params['moduleId']) ? (int) $params['moduleId'] : (isset($_GET['moduleId']) ? (int) $_GET['moduleId'] : null);
+
+        if (isset($_FILES['file']) && $module !== null && $id !== null) {
+            $module = htmlentities((string) $module);
 
             $result = $this->fileService->upload($_FILES, $module, $id);
             if (is_string($result)) {
