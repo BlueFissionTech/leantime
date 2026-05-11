@@ -62,13 +62,78 @@ const LeantimeMention = Mention.extend({
     }
 });
 
+function getContextScopes(contextElement) {
+    var scopes = [];
+    var seen = new Set();
+    var current = contextElement;
+
+    while (current && current !== document.body) {
+        if (
+            current.matches &&
+            current.matches('form, .nyroModalCont, .modal, .modal-body, [data-ticket-id], [data-project-id]')
+        ) {
+            if (!seen.has(current)) {
+                scopes.push(current);
+                seen.add(current);
+            }
+        }
+        current = current.parentElement;
+    }
+
+    if (!seen.has(document)) {
+        scopes.push(document);
+    }
+
+    return scopes;
+}
+
+function findProjectAccessTarget(contextElement) {
+    var selectors = [
+        'input[name="projectUsersAccess"]',
+        'input[name="projectId"]',
+        'select[name="projectId"]',
+        'input[name="currentProject"]',
+        '#projectIdInput',
+        '[data-project-id]'
+    ];
+    var scopes = getContextScopes(contextElement);
+
+    for (var i = 0; i < scopes.length; i++) {
+        var scope = scopes[i];
+
+        for (var j = 0; j < selectors.length; j++) {
+            var field = scope.querySelector(selectors[j]);
+            if (!field) {
+                continue;
+            }
+
+            var value = field.getAttribute('data-project-id') || field.value || '';
+            var projectId = parseInt(value, 10);
+
+            if (projectId > 0) {
+                return String(projectId);
+            }
+        }
+    }
+
+    if (window.leantime && window.leantime.currentProject) {
+        var currentProject = parseInt(window.leantime.currentProject, 10);
+        if (currentProject > 0) {
+            return String(currentProject);
+        }
+    }
+
+    return 'current';
+}
+
 /**
  * Fetch users from the API based on query
  */
-function fetchUsers(query) {
+function fetchUsers(query, contextElement) {
     return new Promise(function(resolve, reject) {
+        var projectUsersAccess = findProjectAccessTarget(contextElement);
         var url = leantime.appUrl + '/api/users?' +
-            'projectUsersAccess=current' +
+            'projectUsersAccess=' + encodeURIComponent(projectUsersAccess) +
             (query ? '&query=' + encodeURIComponent(query) : '');
 
         fetch(url, {
@@ -238,7 +303,9 @@ function createMentionExtension() {
 
             items: function(props) {
                 var query = props.query || '';
-                return fetchUsers(query).then(function(users) {
+                var contextElement = props.editor && props.editor.view ? props.editor.view.dom : null;
+
+                return fetchUsers(query, contextElement).then(function(users) {
                     // Filter by query client-side as well for faster results
                     if (query) {
                         var lowerQuery = query.toLowerCase();
@@ -329,5 +396,6 @@ function createMentionExtension() {
 // Export for use in main module
 module.exports = {
     createMentionExtension: createMentionExtension,
-    fetchUsers: fetchUsers
+    fetchUsers: fetchUsers,
+    findProjectAccessTarget: findProjectAccessTarget
 };
