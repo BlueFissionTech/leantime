@@ -98,6 +98,16 @@ class ProjectHubProjects extends HtmxController
 
                 if ($clientId == '' || $project['clientId'] == $clientId) {
                     $projectResults[$i] = $project;
+                    $projectResults[$i]['progress'] = $this->projectsService->getProjectProgress($project['id']);
+                    $projectResults[$i]['team'] = $this->projectsService->getUsersAssignedToProject($project['id']);
+
+                    $projectComment = $this->commentsService->getComments('project', $project['id']);
+                    $projectResults[$i]['status'] = (
+                        is_array($projectComment)
+                        && count($projectComment) > 0
+                        && isset($projectComment[0]['status'])
+                    ) ? $projectComment[0]['status'] : '';
+
                     $i++;
                 }
             }

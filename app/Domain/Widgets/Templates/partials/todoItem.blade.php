@@ -92,7 +92,9 @@
                         <form class="tw-flex tw-flex-row tw-items-center tw-gap-2"
                               hx-post="{{ BASE_URL }}/hx/widgets/myToDos/updateTitle"
                               hx-target=".ticket-headline-{{ $ticket['id'] }}"
-                              onsubmit="jQuery(this).closest('.edit-form').find('.cancel-edit-task').click();"
+                              hx-swap="innerHTML"
+                              hx-indicator=".htmx-indicator-ticket-{{$ticket['id']}}"
+                              hx-on::after-request="if (event.detail.successful) { const title = this.closest('.ticket-title'); title.querySelector('.title-text').style.display = ''; title.querySelector('.edit-form').style.display = 'none'; }"
                         >
                             <input type="hidden" name="id" value="{{ $ticket['id'] }}"/>
                             <div>
@@ -217,7 +219,6 @@
 
     </div>
 
-    <!-- Subtask Form -->
     <div id="subtask-form-{{$ticket['id']}}" class="subtask-form ticketBox"
          style="display:none; margin:10px; margin-left:40px;">
         <form class="form-group"
@@ -244,7 +245,6 @@
             </div>
         </form>
     </div>
-    <!-- End Subtask Form -->
 
     <div id="accordion_content-{{ $accordionId }}"
          style="{{ $accordionState =='closed' ? 'display:none;' : '' }}"
@@ -256,8 +256,6 @@
         @endforeach
 
         @if($level == 0 && $ticket['type'] === "milestone")
-
-            <!-- Subtask Form -->
             <div id="task-add-form-{{ $groupKey }}-{{$ticket['id']}}" class="subtask-form ticketBox"
                  style="display:none; margin:5px 0px;">
                 <form class="form-group"
@@ -302,7 +300,6 @@
                     </div>
                 </form>
             </div>
-            <!-- End Subtask Form -->
 
             <a href="javascript:void(0);" id="task-add-form-{{ $groupKey }}-{{$ticket['id']}}-handler"
                onclick="jQuery(this).toggle(); jQuery('#task-add-form-{{ $groupKey }}-{{$ticket['id']}}').toggle(); "><i

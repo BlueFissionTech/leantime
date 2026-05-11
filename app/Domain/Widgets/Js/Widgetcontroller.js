@@ -1,25 +1,31 @@
 leantime.widgetController = (function () {
     var grid = [];
+    var gridEventsBound = false;
 
     // Helper function to find next available position
     var findAvailablePosition = function(widget, grid) {
         let x = widget.gridX || 0;
         let y = widget.gridY || 0;
-        let width = widget.gridWidth || 2;
-        let height = widget.gridHeight || 2;
+        let w = widget.gridWidth || 2;
+        let h = widget.gridHeight || 2;
+        let columns = typeof grid.getColumn === 'function' ? grid.getColumn() : 12;
+        let maxX = Math.max(0, columns - w);
 
         // Try the preferred position first
-        if (grid.willItFit({x, y, width, height})) {
+        if (grid.willItFit({x: x, y: y, w: w, h: h})) {
             return { x: x, y: y };
         }
 
         // If preferred position is occupied, find next available spot
-        let maxY = Math.max(...grid.engine.nodes.map(n => n.y + n.h), 0);
+        let nodes = (grid.engine && Array.isArray(grid.engine.nodes)) ? grid.engine.nodes : [];
+        let maxY = nodes.reduce(function(max, node) {
+            return Math.max(max, (node.y || 0) + (node.h || 0));
+        }, 0);
 
         // Try positions from top to bottom
         for (let newY = 0; newY <= maxY + 1; newY++) {
-            for (let newX = 0; newX <= 12 - width; newX++) {
-                if (grid.willItFit({newX, newY, width, height})) {
+            for (let newX = 0; newX <= maxX; newX++) {
+                if (grid.willItFit({x: newX, y: newY, w: w, h: h})) {
                     return { x: newX, y: newY };
                 }
             }
@@ -35,6 +41,28 @@ leantime.widgetController = (function () {
                 el.innerHTML = DOMPurify.sanitize(w.content);
             }
         }
+    };
+
+    var bindGridActions = function () {
+        if (gridEventsBound) {
+            return;
+        }
+
+        jQuery(document)
+            .off("click.leantimeWidget", ".grid-stack-item .removeWidget")
+            .on("click.leantimeWidget", ".grid-stack-item .removeWidget", function(e) {
+                e.preventDefault();
+                removeWidget(jQuery(this).closest(".grid-stack-item")[0]);
+            });
+
+        jQuery(document)
+            .off("click.leantimeWidget", ".grid-stack-item .fitContent")
+            .on("click.leantimeWidget", ".grid-stack-item .fitContent", function(e) {
+                e.preventDefault();
+                resizeWidget(jQuery(this).closest(".grid-stack-item")[0]);
+            });
+
+        gridEventsBound = true;
     };
 
 
@@ -67,14 +95,7 @@ leantime.widgetController = (function () {
             saveGrid();
         });
 
-        jQuery(".grid-stack-item").each(function(){
-            jQuery(this).find(".removeWidget").click(function(){
-                removeWidget(jQuery(this).closest(".grid-stack-item")[0]);
-            });
-            jQuery(this).find(".fitContent").click(function(){
-                resizeWidget(jQuery(this).closest(".grid-stack-item")[0]);
-            });
-        });
+        bindGridActions();
 
         jQuery(document).ready(function(){
             jQuery("#gridBoard").css("opacity", 1);
@@ -83,10 +104,11 @@ leantime.widgetController = (function () {
     };
 
     var saveGrid = function() {
-        let items = grid.save();
+        let items = [];
+        let nodes = (grid.engine && Array.isArray(grid.engine.nodes)) ? grid.engine.nodes.slice() : [];
 
         // Sort items by Y position first, then X position
-        items.sort((a, b) => {
+        nodes.sort((a, b) => {
             return a.y === b.y ? a.x - b.x : a.y - b.y;
         });
 
@@ -99,35 +121,22 @@ leantime.widgetController = (function () {
             };
         }
 
-        items.forEach(function(item) {
-            //get hx links
-            let htmxElement = jQuery(item.content).find("[hx-get]").first();
+        nodes.forEach(function(node) {
+            let htmxElement = node.el ? node.el.querySelector("[hx-get]") : null;
 
-            item.id = htmxElement.attr("id");
-            item.widgetUrl = htmxElement.attr("hx-get");
-            item.widgetTrigger = htmxElement.attr("hx-trigger");
-
-            if(item.x == undefined) {
-                item.x = 0;
+            if (!htmxElement) {
+                return;
             }
-            item.gridX = item.x;
 
-            if(item.y == undefined) {
-                item.y = 0;
-            }
-            item.gridY = item.y;
-
-            if(item.w == undefined) {
-                item.w = 1;
-            }
-            item.gridWidth = item.w;
-
-            if(item.h == undefined) {
-                item.h = 1;
-            }
-            item.gridHeight = item.h;
-
-            item.content = '';
+            items.push({
+                id: htmxElement.getAttribute("id"),
+                widgetUrl: htmxElement.getAttribute("hx-get"),
+                widgetTrigger: htmxElement.getAttribute("hx-trigger"),
+                gridX: node.x != undefined ? node.x : 0,
+                gridY: node.y != undefined ? node.y : 0,
+                gridWidth: node.w != undefined ? node.w : 1,
+                gridHeight: node.h != undefined ? node.h : 1
+            });
         });
 
 
@@ -143,8 +152,19 @@ leantime.widgetController = (function () {
 
 
     var removeWidget = function (el) {
-        el.remove();
+        if (!el) {
+            return;
+        }
+
+        let htmxElement = el.querySelector("[hx-get]");
+        let widgetId = htmxElement ? htmxElement.getAttribute("id") : null;
+
         grid.removeWidget(el, true);
+
+        if (widgetId) {
+            jQuery("#widget-toggle-" + widgetId).prop("checked", false);
+        }
+
         saveGrid();
     }
 
@@ -167,11 +187,18 @@ leantime.widgetController = (function () {
             // Create the widget structure using DOM methods
             const widgetNode = document.createElement('div');
             widgetNode.className = 'grid-stack-item';
+            widgetNode.id = 'widget_wrapper_' + widget.id;
+            widgetNode.setAttribute('gs-x', position.x);
+            widgetNode.setAttribute('gs-y', position.y);
+            widgetNode.setAttribute('gs-w', widget.gridWidth || 2);
+            widgetNode.setAttribute('gs-h', widget.gridHeight || 2);
+            widgetNode.setAttribute('gs-min-w', widget.gridMinWidth || 1);
+            widgetNode.setAttribute('gs-min-h', widget.gridMinHeight || 1);
 
             // Create the content container
             const contentDiv = document.createElement('div');
             contentDiv.className = `grid-stack-item-content tw-p-none ${
-                widget.widgetBackground == "default" ? "maincontentinner" : widget.background
+                widget.widgetBackground == "default" ? "maincontentinner" : widget.widgetBackground
             }`;
 
             // Set the inner structure
@@ -180,12 +207,7 @@ leantime.widgetController = (function () {
 
             // Add to grid and make it a widget
             grid.el.appendChild(widgetNode);
-            grid.makeWidget(widgetNode, {
-                x: widget.gridX || 0,
-                y: widget.gridY || 50,
-                w: widget.gridWidth || 2,
-                h: widget.gridHeight || 2
-            });
+            grid.makeWidget(widgetNode);
 
             // Initialize HTMX
             htmx.process(widgetNode);
@@ -195,8 +217,7 @@ leantime.widgetController = (function () {
     }
 
     var buildWidget = function(widget) {
-        return '<div class="widgetInner">' +
-            '        <div class="' + (widget.widgetBackground == "default" ? "tw-pb-l" : "") + '">\n' +
+        return '<div class="tw-flex tw-flex-col tw-h-full ' + (widget.widgetBackground == "default" ? "tw-pb-l" : "") + '">' +
             '            <div class="stickyHeader" style="padding:15px; height:50px;  width:100%;">\n' +
             '               <div class="grid-handler-top tw-h-[40px] tw-cursor-grab tw-float-left tw-mr-sm">\n' +
             '                    <i class="fa-solid fa-grip-vertical"></i>\n' +
@@ -213,12 +234,12 @@ leantime.widgetController = (function () {
             '            </div>\n' +
             '\n' +
             '        </div>\n' +
-            ' <div class="widgetContent tw-px-l">\n' +
-            '             <div hx-get="'+widget.widgetUrl+'" hx-trigger="'+widget.widgetTrigger+'" id="'+widget.id+'"></div>\n' +
+            '        <span class="clearall"></span>\n' +
+            ' <div class="widgetContent ' + (widget.widgetBackground == "default" ? 'tw-px-m' : '') + '">\n' +
+            '             <div hx-get="'+widget.widgetUrl+'" hx-trigger="'+widget.widgetTrigger+'" id="'+widget.id+'" class="tw-h-full"></div>\n' +
             '        </div>\n' +
             '       </div>\n' +
-            '        <div class="clear"></div>\n' +
-            '    </div>\n';
+            '        <div class="clear"></div>\n';
     }
 
     // Make public what you want to have public, everything else is private
