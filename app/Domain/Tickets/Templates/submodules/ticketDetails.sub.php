@@ -168,7 +168,7 @@ foreach ($dependencyTickets as $dependencyTicket) {
 
                 <div class="form-group" id="descriptionEditor">
                     <textarea name="description" id="ticketDescription"
-                              class="tiptapComplex"><?php echo $ticket->description !== null ? htmlentities($ticket->description) : ''; ?></textarea><br/>
+                              class="tiptapComplex"><?php echo $ticket->description !== null ? htmlentities($tpl->patchDownloadUrlToFilenameOrAwsUrl($ticket->description)) : ''; ?></textarea><br/>
                 </div>
                 <input type="hidden" name="acceptanceCriteria" value=""/>
 

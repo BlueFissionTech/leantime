@@ -188,6 +188,7 @@ class ShowTicket extends Controller
             }
 
             $freshTicket = $this->ticketService->getTicket($id);
+            $tab = '#githubstatus';
 
             if ($freshTicket === false) {
                 return $this->tpl->display('errors.error500', responseCode: 500);
@@ -280,6 +281,8 @@ class ShowTicket extends Controller
         $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
         $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($id));
         $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
+        $this->tpl->assign('defaultGithubTitle', $this->githubElevation->getDefaultGithubTitle($ticket));
+        $this->tpl->assign('defaultGithubSummary', $this->githubElevation->getDefaultGithubSummary($ticket));
         $this->tpl->assign('activeTab', $activeTab);
 
         $this->tpl->assign('timesheetValues', [

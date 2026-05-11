@@ -45,19 +45,19 @@
                 <form method="post" action="{{ BASE_URL }}/support-center/{{ $ticket->id }}/elevate-github?projectId={{ $ticket->projectId }}">
                     <div class="form-group">
                         <label for="githubTitle">GitHub Title</label>
-                        <input id="githubTitle" type="text" name="githubTitle" class="form-control" required />
+                        <input id="githubTitle" type="text" name="githubTitle" class="form-control" style="width:100%; max-width:none;" value="{{ $defaultGithubTitle }}" required />
                     </div>
                     <div class="form-group">
                         <label for="githubSummary">Technical Summary</label>
-                        <textarea id="githubSummary" name="githubSummary" rows="5" class="form-control tiptapComplex" required></textarea>
+                        <textarea id="githubSummary" name="githubSummary" rows="10" class="form-control" style="width:100%; max-width:none;" required>{{ $defaultGithubSummary }}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="githubReproduction">Reproduction Notes</label>
-                        <textarea id="githubReproduction" name="githubReproduction" rows="4" class="form-control tiptapSimple"></textarea>
+                        <textarea id="githubReproduction" name="githubReproduction" rows="6" class="form-control" style="width:100%; max-width:none;"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="githubImpact">Impact</label>
-                        <textarea id="githubImpact" name="githubImpact" rows="3" class="form-control tiptapSimple"></textarea>
+                        <textarea id="githubImpact" name="githubImpact" rows="5" class="form-control" style="width:100%; max-width:none;"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Elevate to GitHub</button>
                 </form>

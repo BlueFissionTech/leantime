@@ -1,7 +1,7 @@
 @php
     $isBlocked = app()->make(\Leantime\Domain\Ticketdependencies\Services\Ticketdependencies::class)
         ->isTicketBlocked((int) $row['id'], $statusLabels);
-    $dueDateAlert = app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
+    $dueDateAlert = $row['timeAlert'] ?? app(\Leantime\Domain\Tickets\Support\DueDateAlert::class)->forDate($row['dateToFinish'] ?? null);
     $dueDateClass = match ($dueDateAlert) {
         'overdue' => 'ticket-due-date ticket-due-date--overdue',
         'dueSoon' => 'ticket-due-date ticket-due-date--soon',
@@ -44,8 +44,11 @@
 
             <div class="col-md-4" style="padding:0 15px;">
                 @if($cardType == "full")
-                    <i class="fa-solid fa-business-time infoIcon" data-tippy-content=" {{ __("label.due") }}"></i>
-                    <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput {{ $dueDateClass }}" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
+                    <div class="kanban-due-date{{ $dueDateAlert ? ' is-'.$dueDateAlert : '' }}">
+                        <x-global::kanban.time-indicator :type="$dueDateAlert" class="tw-mr-xs" />
+                        <i class="fa-solid fa-business-time infoIcon" data-tippy-content=" {{ __("label.due") }}"></i>
+                        <input type="text" title="{{ __("label.due") }}" value="{{ format($row['dateToFinish'])->date(__("text.anytime")) }}" class="duedates secretInput due-date-input {{ $dueDateClass }}{{ $dueDateAlert ? ' is-'.$dueDateAlert : '' }}" style="margin-left:0px;" data-id="{{ $row['id'] }}" name="date" />
+                    </div>
                 @endif
             </div>
 
