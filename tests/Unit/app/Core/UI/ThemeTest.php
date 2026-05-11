@@ -39,8 +39,12 @@ class ThemeTest extends \Unit\TestCase
             define('BASE_URL', 'http://localhost');
         }
 
-        $this->settingsRepoMock = $this->make(Setting::class, [
+        session()->forget('usersettings.colorScheme');
+        session()->forget('usersettings.colors.primaryColor');
+        session()->forget('usersettings.colors.secondaryColor');
 
+        $this->settingsRepoMock = $this->make(Setting::class, [
+            'getSetting' => false,
         ]);
         $this->languageMock = $this->make(Language::class, [
 
@@ -74,6 +78,9 @@ class ThemeTest extends \Unit\TestCase
      */
     public function test_get_default_color_scheme_with_color_env_set()
     {
+        session()->forget('usersettings.colorScheme');
+        session()->forget('usersettings.colors.primaryColor');
+        session()->forget('usersettings.colors.secondaryColor');
 
         // Load class to be tested
         $this->theme = new Theme(
@@ -94,6 +101,9 @@ class ThemeTest extends \Unit\TestCase
      */
     public function test_get_default_color_scheme_without_env()
     {
+        session()->forget('usersettings.colorScheme');
+        session()->forget('usersettings.colors.primaryColor');
+        session()->forget('usersettings.colors.secondaryColor');
 
         $configMock = $this->make(Environment::class, []);
 
@@ -108,5 +118,36 @@ class ThemeTest extends \Unit\TestCase
         $colorScheme = $theme->getColorScheme();
         $this->assertEquals('themeDefault', $colorScheme);
 
+    }
+
+    public function test_get_default_color_scheme_uses_company_settings_colors()
+    {
+        session()->forget('usersettings.colorScheme');
+        session()->forget('usersettings.colors.primaryColor');
+        session()->forget('usersettings.colors.secondaryColor');
+
+        $settingsRepoMock = $this->make(Setting::class, [
+            'getSetting' => function ($key) {
+                return match ($key) {
+                    'companysettings.primarycolor' => '#112233',
+                    'companysettings.secondarycolor' => '#445566',
+                    default => false,
+                };
+            },
+        ]);
+
+        $configMock = $this->make(Environment::class, []);
+
+        $theme = new Theme(
+            settingsRepo: $settingsRepoMock,
+            language: $this->languageMock,
+            config: $configMock,
+            appSettings: $this->appSettingsMock,
+            fileManager: $this->fileManagerMock
+        );
+
+        $colorScheme = $theme->getColorScheme();
+
+        $this->assertEquals('companyColors', $colorScheme);
     }
 }
