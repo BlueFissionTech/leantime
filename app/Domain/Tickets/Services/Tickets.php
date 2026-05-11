@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Leantime\Core\Configuration\Environment as EnvironmentCore;
+use Leantime\Core\Controller\Frontcontroller;
 use Leantime\Core\Events\DispatchesEvents;
 use Leantime\Core\Language as LanguageCore;
 use Leantime\Core\Support\DateTimeHelper;
@@ -27,6 +28,7 @@ use Leantime\Domain\Tickets\Models\Tickets as TicketModel;
 use Leantime\Domain\Tickets\Repositories\TicketHistory;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
 use Leantime\Domain\Tickets\Support\HighImpactTicketRanker;
+use Leantime\Domain\Tickets\Support\ProjectSheetExportFormatter;
 use Leantime\Domain\Tickets\Support\SubtaskProgress;
 use Leantime\Domain\Timesheets\Repositories\Timesheets as TimesheetRepository;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
@@ -66,6 +68,7 @@ class Tickets
         private ProjectService $projectService,
         private TimesheetService $timesheetService,
         private SprintService $sprintService,
+        private ProjectSheetExportFormatter $projectSheetExportFormatter,
         private TicketHistory $ticketHistoryRepo,
         private Goalcanvas $goalcanvasService,
         private DateTimeHelper $dateTimeHelper
@@ -432,36 +435,92 @@ class Tickets
         );
 
         if (is_array($tickets)) {
-            $tickets = $this->decorateWithFriendlyStatusLabels($tickets);
+            $tickets = $this->decorateTicketsForDisplay($tickets);
         }
 
         return $tickets;
     }
 
-    private function decorateWithFriendlyStatusLabels(array $tickets): array
+    public function getProjectSheetExport(array $params): array
     {
+        $searchCriteria = $this->prepareTicketSearchArray($params);
+        $searchCriteria['currentProject'] = (int) ($params['currentProject'] ?? $params['projectId'] ?? 0);
 
+        if (($searchCriteria['currentProject'] ?? 0) <= 0) {
+            return [];
+        }
+
+        $tickets = $this->getAll($searchCriteria, 10000);
+
+        if (! is_array($tickets)) {
+            return [];
+        }
+
+        $updatedSince = null;
+        $updatedSinceValue = trim((string) ($params['updated_since'] ?? $params['updatedSince'] ?? ''));
+
+        if ($updatedSinceValue !== '') {
+            try {
+                $updatedSince = CarbonImmutable::parse($updatedSinceValue);
+            } catch (\Throwable $e) {
+                $updatedSince = null;
+            }
+        }
+
+        return $this->projectSheetExportFormatter->format($tickets, $updatedSince);
+    }
+
+    private function decorateTicketsForDisplay(array $tickets): array
+    {
         if (is_array($tickets)) {
-
-            $ticketCounter = 0;
             $projectStatusLabels = [];
+            $today = CarbonImmutable::now()->startOfDay();
 
             foreach ($tickets as &$ticket) {
-
                 if (! isset($projectStatusLabels[$ticket['projectId']])) {
                     $projectStatusLabels[$ticket['projectId']] = $this->ticketRepository->getStateLabels($ticket['projectId']);
                 }
 
-                if (isset($projectStatusLabels[$ticket['projectId']][$ticket['status']]) &&
-                    $projectStatusLabels[$ticket['projectId']][$ticket['status']]['statusType'] !== 'DONE') {
-                    $ticket['statusLabel'] = $projectStatusLabels[$ticket['projectId']][$ticket['status']]['name'];
+                $statusConfig = $projectStatusLabels[$ticket['projectId']][$ticket['status']] ?? null;
+
+                if (isset($statusConfig['statusType']) && $statusConfig['statusType'] !== 'DONE') {
+                    $ticket['statusLabel'] = $statusConfig['name'];
                 }
 
+                $ticket['timeAlert'] = $this->getTicketTimeAlert($ticket['dateToFinish'] ?? null, $statusConfig, $today);
             }
         }
 
         return $tickets;
+    }
 
+    private function getTicketTimeAlert(?string $dateToFinish, ?array $statusConfig, CarbonImmutable $today): ?string
+    {
+        if (($statusConfig['statusType'] ?? null) === 'DONE') {
+            return null;
+        }
+
+        if (empty($dateToFinish) || str_starts_with($dateToFinish, '0000-00-00')) {
+            return null;
+        }
+
+        try {
+            $dueDate = CarbonImmutable::parse($dateToFinish)->startOfDay();
+        } catch (\Exception $e) {
+            return null;
+        }
+
+        $diffDays = $today->diffInDays($dueDate, false);
+
+        if ($diffDays < 0) {
+            return 'overdue';
+        }
+
+        if ($diffDays <= 3) {
+            return 'dueSoon';
+        }
+
+        return null;
     }
 
     public function simpleTicketCounter(?int $userId = null, ?int $project = null, string $status = '', array $types = []): int
@@ -604,6 +663,7 @@ class Tickets
             $searchCriteria,
             $searchCriteria['orderBy'] ?? 'date'
         );
+        $tickets = $this->decorateTicketsForDisplay($tickets ?: []);
 
         if (
             $searchCriteria['groupBy'] == null
@@ -2869,10 +2929,13 @@ class Tickets
     public function getTicketTemplateAssignments($params): array
     {
         $searchCriteria = $this->prepareTicketSearchArray($params);
-        if (! is_array($searchCriteria)) {
-            $searchCriteria = [];
+        if (($params['orderBy'] ?? '') === '') {
+            $currentRoute = Frontcontroller::getCurrentRoute();
+            $searchCriteria['orderBy'] = match ($currentRoute) {
+                'tickets.showAll', 'tickets.showKanban' => 'duedate',
+                default => 'kanbansort',
+            };
         }
-        $searchCriteria['orderBy'] = 'kanbansort';
 
         $filterProjectId = $searchCriteria['currentProject'] ?? session('currentProject');
         $isAllProjectsScope = $filterProjectId === '' || $filterProjectId === null || $filterProjectId === 'all';

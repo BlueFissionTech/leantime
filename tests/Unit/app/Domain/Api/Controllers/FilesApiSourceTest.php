@@ -27,6 +27,7 @@ class FilesApiSourceTest extends TestCase
         $service = file_get_contents(__DIR__.'/../../../../../../app/Domain/Files/Services/Files.php');
 
         $this->assertIsString($service);
+        $this->assertStringContainsString('public function getFile(int $fileId): array|false', $service);
         $this->assertStringContainsString('public function getApiMetadataUpdates(array $values): array', $service);
         $this->assertStringContainsString("if (array_key_exists('realName', \$values))", $service);
         $this->assertStringContainsString("if (array_key_exists('module', \$values))", $service);

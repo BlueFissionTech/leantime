@@ -63,6 +63,24 @@
     overflow:hidden;
 }
 
+.kanban-due-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kanban-due-date .due-date-input.is-overdue,
+.kanban-due-date .due-date-input.is-overdue:focus {
+    color: #b42318;
+    font-weight: 700;
+}
+
+.kanban-due-date .due-date-input.is-dueSoon,
+.kanban-due-date .due-date-input.is-dueSoon:focus {
+    color: #b54708;
+    font-weight: 700;
+}
+
 .ticketBox:hover {
     background:var(--kanban-card-hover);
 }

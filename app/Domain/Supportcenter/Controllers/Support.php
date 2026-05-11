@@ -180,6 +180,8 @@ class Support extends Controller
         $this->tpl->assign('githubIssue', $this->githubElevation->getTicketGithubIssue($ticketId));
         $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($ticketId));
         $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
+        $this->tpl->assign('defaultGithubTitle', $this->githubElevation->getDefaultGithubTitle($ticket));
+        $this->tpl->assign('defaultGithubSummary', $this->githubElevation->getDefaultGithubSummary($ticket));
 
         return $this->tpl->display('supportcenter.show');
     }
