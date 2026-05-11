@@ -139,6 +139,34 @@ class Files
         return $this->fileRepository->deleteFile($fileId);
     }
 
+    public function updateFile(int $fileId, array $values): bool
+    {
+        return $this->fileRepository->updateFile($fileId, $values);
+    }
+
+    public function getFile(int $fileId): array|false
+    {
+        return $this->fileRepository->getFile($fileId);
+    }
+
+    public function getApiMetadataUpdates(array $values): array
+    {
+        $updates = [];
+
+        if (array_key_exists('realName', $values)) {
+            $updates['realName'] = (string) $values['realName'];
+        }
+
+        if (array_key_exists('module', $values)) {
+            $updates['module'] = (string) $values['module'];
+        }
+
+        if (array_key_exists('moduleId', $values)) {
+            $updates['moduleId'] = (int) $values['moduleId'];
+        }
+
+        return $updates;
+    }
     public function getFilePathById($fileId): false|string
     {
         $dbReference = $this->fileRepository->getFile($fileId);

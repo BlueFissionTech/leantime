@@ -3,6 +3,8 @@
 namespace Leantime\Domain\Api\Controllers;
 
 use Leantime\Core\Controller\Controller;
+use Leantime\Domain\Auth\Models\Roles;
+use Leantime\Domain\Auth\Services\Auth as AuthService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Users\Services\Users as UserService;
 use Symfony\Component\HttpFoundation\Response;
@@ -81,14 +83,39 @@ class Files extends Controller
      */
     public function patch(array $params): Response
     {
-        if (
-            ! isset($params['patchModalSettings'])
-            || ! $this->userService->updateUserSettings('modals', $params['settings'], 1)
-        ) {
-            return $this->tpl->displayJson(['status' => 'failure'], 500);
+        if (isset($params['id'])) {
+            if (! AuthService::userIsAtLeast(Roles::$editor)) {
+                return $this->tpl->displayJson(['error' => 'Not Authorized'], 403);
+            }
+
+            $fileId = (int) $params['id'];
+            $existingFile = $this->fileService->getFile($fileId);
+
+            if ($existingFile === false) {
+                return $this->tpl->displayJson(['status' => 'failure', 'error' => 'File not found'], 404);
+            }
+
+            $updates = $this->fileService->getApiMetadataUpdates($params);
+
+            if ($updates === []) {
+                return $this->tpl->displayJson([
+                    'status' => 'failure',
+                    'error' => 'No supported file metadata fields were supplied',
+                ], 400);
+            }
+
+            if (! $this->fileService->updateFile($fileId, $updates)) {
+                return $this->tpl->displayJson(['status' => 'failure'], 500);
+            }
+
+            return $this->tpl->displayJson(['status' => 'ok']);
         }
 
-        return $this->tpl->displayJson(['status' => 'ok']);
+        if (isset($params['patchModalSettings']) && $this->userService->updateUserSettings('modals', $params['settings'], 1)) {
+            return $this->tpl->displayJson(['status' => 'ok']);
+        }
+
+        return $this->tpl->displayJson(['status' => 'failure'], 500);
     }
 
     /**
@@ -96,6 +123,23 @@ class Files extends Controller
      */
     public function delete(array $params): Response
     {
-        return $this->tpl->displayJson(['status' => 'Not implemented'], 501);
+        if (! AuthService::userIsAtLeast(Roles::$editor)) {
+            return $this->tpl->displayJson(['error' => 'Not Authorized'], 403);
+        }
+
+        if (! isset($params['id'])) {
+            return $this->tpl->displayJson(['status' => 'failure', 'error' => 'Missing file id'], 400);
+        }
+
+        $fileId = (int) $params['id'];
+        if ($this->fileService->getFile($fileId) === false) {
+            return $this->tpl->displayJson(['status' => 'failure', 'error' => 'File not found'], 404);
+        }
+
+        if (! $this->fileService->deleteFile($fileId)) {
+            return $this->tpl->displayJson(['status' => 'failure'], 500);
+        }
+
+        return $this->tpl->displayJson(['status' => 'ok']);
     }
 }
