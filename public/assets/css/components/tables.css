@@ -561,6 +561,31 @@ table td{
     font-weight:bold;
 }
 
+.dataTables_wrapper .dt-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.dataTables_wrapper .dataTables_scroll {
+    width: 100%;
+}
+
+.dataTables_wrapper .dataTables_scrollBody {
+    border-bottom: 1px solid var(--neutral);
+}
+
+.dataTables_wrapper .dataTables_scrollHead table.dataTable,
+.dataTables_wrapper .dataTables_scrollBody table.dataTable {
+    width: 100% !important;
+}
+
+.ticketTable.dataTable th,
+.ticketTable.dataTable td {
+    vertical-align: middle;
+}
+
 .dt-button-down-arrow {
     font-size:0px;
 }
