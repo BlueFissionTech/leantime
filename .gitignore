@@ -113,10 +113,6 @@ public/theme/dts/
 nbproject
 config/config.yaml
 config/.env
-/.env
-/.env.*
-!/.env.example
-
 # Documentor
 .phpdoc/cache
 
