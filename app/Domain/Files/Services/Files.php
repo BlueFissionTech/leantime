@@ -149,6 +149,25 @@ class Files
         return $this->fileRepository->updateFile($fileId, $values);
     }
 
+    public function getApiMetadataUpdates(array $values): array
+    {
+        $updates = [];
+
+        if (array_key_exists('realName', $values)) {
+            $updates['realName'] = (string) $values['realName'];
+        }
+
+        if (array_key_exists('module', $values)) {
+            $updates['module'] = (string) $values['module'];
+        }
+
+        if (array_key_exists('moduleId', $values)) {
+            $updates['moduleId'] = (int) $values['moduleId'];
+        }
+
+        return $updates;
+    }
+
     public function getFilePathById($fileId): false|string
     {
         $dbReference = $this->fileRepository->getFile($fileId);
