@@ -22,6 +22,8 @@ use Leantime\Domain\Notifications\Services\Messengers;
 use Leantime\Domain\Notifications\Services\Notifications as NotificationService;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Queue\Repositories\Queue as QueueRepository;
+use Leantime\Domain\Raci\Services\RaciDigests;
+use Leantime\Domain\Raci\Services\RaciNotificationRouting;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Tickets\Repositories\Tickets as TicketRepository;
 use Leantime\Domain\Wiki\Repositories\Wiki;
@@ -39,6 +41,8 @@ class Projects
         private LanguageCore $language,
         private Messengers $messengerService,
         private NotificationService $notificationService,
+        private RaciNotificationRouting $raciNotificationRouting,
+        private RaciDigests $raciDigests,
         protected Files $fileService,
         protected Avatarcreator $avatarcreator
     ) {}
@@ -275,14 +279,9 @@ class Projects
             }
         }
 
-        $emailMessage = $notification->message;
-        if ($notification->url !== false) {
-            $emailMessage .= " <a href='".$notification->url['url']."'>".$notification->url['text'].'</a>';
-        }
+        $routing = $this->raciNotificationRouting->resolveRecipients($notification);
 
-        // NEW Queuing messaging system
         $queue = app()->make(QueueRepository::class);
-        $queue->queueMessageToUsers($users, $emailMessage, $notification->subject, $notification->projectId);
 
         // Send to messengers
         $this->messengerService->sendNotificationToMessengers($notification, $projectName);
@@ -352,6 +351,76 @@ class Projects
         }
 
         $filteredUsersToNotify = array_filter($allUsersToNotify, fn ($u) => in_array($u['id'], $filteredIds));
+
+        if ($routing['hasScopedAssignments'] === true) {
+            $ctaUserIds = array_values(array_intersect($users, $routing['cta']));
+            $infoUserIds = array_values(array_intersect($users, $routing['info']));
+            $digestUserIds = array_values(array_intersect($users, $routing['digest']));
+
+            $ctaMessage = $notification->message;
+            if ($notification->url !== false) {
+                $ctaMessage .= " <a href='".$notification->url['url']."'>".$notification->url['text'].'</a>';
+            }
+
+            if ($ctaUserIds !== []) {
+                $queue->queueMessageToUsers($ctaUserIds, $ctaMessage, $notification->subject, $notification->projectId);
+            }
+
+            if ($infoUserIds !== []) {
+                $queue->queueMessageToUsers($infoUserIds, $notification->message, $notification->subject, $notification->projectId);
+            }
+
+            if ($digestUserIds !== []) {
+                $this->raciDigests->queueEntries($digestUserIds, $notification, $routing['cadence']);
+            }
+
+            $userLookup = [];
+            foreach ($filteredUsersToNotify as $userInfo) {
+                $userLookup[(int) $userInfo['id']] = $userInfo;
+            }
+
+            $notificationPayloads = [];
+            foreach ($ctaUserIds as $userId) {
+                if (isset($userLookup[(int) $userId])) {
+                    $notificationPayloads[] = [
+                        'user' => $userLookup[(int) $userId],
+                        'message' => $notification->message,
+                        'url' => $notification->url['url'] ?? '',
+                    ];
+                }
+            }
+
+            foreach ($infoUserIds as $userId) {
+                if (isset($userLookup[(int) $userId])) {
+                    $notificationPayloads[] = [
+                        'user' => $userLookup[(int) $userId],
+                        'message' => $notification->message,
+                        'url' => '',
+                    ];
+                }
+            }
+
+            self::dispatch_event('notifyProjectUsers', [
+                'type' => 'projectUpdate',
+                'module' => $notification->module,
+                'moduleId' => $entityId,
+                'message' => $notification->message,
+                'subject' => $notification->subject,
+                'users' => array_values($filteredUsersToNotify),
+                'url' => $notification->url['url'] ?? '',
+                'notifications' => $notificationPayloads,
+            ], 'leantime.domain.projects.services.projects.notifyProjectUsers');
+
+            return;
+        }
+
+        $emailMessage = $notification->message;
+        if ($notification->url !== false) {
+            $emailMessage .= " <a href='".$notification->url['url']."'>".$notification->url['text'].'</a>';
+        }
+
+        // NEW Queuing messaging system
+        $queue->queueMessageToUsers($users, $emailMessage, $notification->subject, $notification->projectId);
 
         /**
          * This event is fired to notify project users of important updates.

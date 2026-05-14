@@ -17,6 +17,7 @@ use Leantime\Domain\Menu\Repositories\Menu as MenuRepository;
 use Leantime\Domain\Notifications\Models\Notification;
 use Leantime\Domain\Projects\Repositories\Projects as ProjectRepository;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
+use Leantime\Domain\Raci\Services\RaciAssignments;
 use Leantime\Domain\Setting\Repositories\Setting as SettingRepository;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Users\Repositories\Users as UserRepository;
@@ -46,6 +47,7 @@ class ShowProject extends Controller
     private CommentRepository $commentsRepo;
 
     private MenuRepository $menuRepo;
+    private RaciAssignments $raciAssignments;
 
     /**
      * init - initialize private variables
@@ -61,7 +63,8 @@ class ShowProject extends Controller
         ClientRepository $clientsRepo,
         FileRepository $fileRepo,
         CommentRepository $commentsRepo,
-        MenuRepository $menuRepo
+        MenuRepository $menuRepo,
+        RaciAssignments $raciAssignments
     ) {
 
         Auth::authOrRedirect([Roles::$owner, Roles::$admin, Roles::$manager]);
@@ -80,6 +83,7 @@ class ShowProject extends Controller
         $this->fileRepo = $fileRepo;
         $this->commentsRepo = $commentsRepo;
         $this->menuRepo = $menuRepo;
+        $this->raciAssignments = $raciAssignments;
 
         if (! session()->exists('lastPage')) {
             session(['lastPage' => CURRENT_URL]);
@@ -247,6 +251,7 @@ class ShowProject extends Controller
                         $this->tpl->setNotification($this->language->__('notification.project_has_tickets'), 'error');
                     } else {
                         $this->projectRepo->editProject($values, $id);
+                        $this->raciAssignments->saveProjectAssignments($id, $_POST);
 
                         $project['assignedUsers'] = $this->projectRepo->getUsersAssignedToProject($id, true);
 
@@ -297,6 +302,7 @@ class ShowProject extends Controller
             $this->tpl->assign('employees', $employees);
 
             $this->tpl->assign('project', $project);
+            $this->tpl->assign('projectRaci', $this->raciAssignments->getProjectAssignments($id));
 
             $this->tpl->assign('menuTypes', $this->menuRepo->getMenuTypes());
             $this->tpl->assign('projectTypes', $projectTypes);
