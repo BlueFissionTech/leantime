@@ -551,7 +551,16 @@ class Tickets
                 $q->whereRaw($findInSetSql, [$term])
                     ->orWhere('zp_tickets.headline', 'LIKE', $termWild)
                     ->orWhere('zp_tickets.description', 'LIKE', $termWild)
-                    ->orWhere('zp_tickets.id', 'LIKE', $termWild);
+                    ->orWhere('zp_tickets.id', 'LIKE', $termWild)
+                    ->orWhere('zp_projects.name', 'LIKE', $termWild)
+                    ->orWhere('milestone.headline', 'LIKE', $termWild)
+                    ->orWhere('parent.headline', 'LIKE', $termWild)
+                    ->orWhere('t1.firstname', 'LIKE', $termWild)
+                    ->orWhere('t1.lastname', 'LIKE', $termWild)
+                    ->orWhereRaw("CONCAT(t1.firstname, ' ', t1.lastname) LIKE ?", [$termWild])
+                    ->orWhere('t2.firstname', 'LIKE', $termWild)
+                    ->orWhere('t2.lastname', 'LIKE', $termWild)
+                    ->orWhereRaw("CONCAT(t2.firstname, ' ', t2.lastname) LIKE ?", [$termWild]);
             });
         }
 
