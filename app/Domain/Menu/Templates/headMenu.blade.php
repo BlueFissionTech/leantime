@@ -92,30 +92,26 @@
                         <p style='padding: 10px'>{{ __('text.no_notifications') }}</p>
                     @endif
 
-                    @foreach ($notifications as $notif)
-                        @if ($notif['type'] == 'mention')
-                            @continue
+                    @if (count($commentNotifications) > 0)
+                        <li class="notificationSection">{{ __('label.notification_category_comments') }}</li>
+                        @foreach ($commentNotifications as $notif)
+                            @include('menu::partials.notificationListItem', ['notif' => $notif])
+                        @endforeach
+                    @endif
+
+                    @if (count($commentNotifications) > 0 && count($activityNotifications) > 0)
+                        <li class="notificationSectionDivider" aria-hidden="true"></li>
+                    @endif
+
+                    @if (count($activityNotifications) > 0)
+                        @if (count($commentNotifications) > 0)
+                            <li class="notificationSection">{{ __('label.notifications_all_activity') }}</li>
                         @endif
 
-                        <li
-                            @if ($notif['read'] == 0)
-                                class='new'
-                            @endif
-                            data-url="{{ $notif['url'] }}"
-                            data-id="{{ $notif['id'] }}"
-                        >
-                            <a href="{{ $notif['url'] }}">
-                                <span class="notificationProfileImage">
-                                    <img src="{{ BASE_URL }}/api/users?profileImage={{ $notif['authorId'] }}"/>
-                                </span>
-                                <span class="notificationDate">
-                                    {{ format($notif['datetime'])->date() }}
-                                    {{ format($notif['datetime'])->time() }}
-                                </span>
-                                <span class="notificationTitle">{!! strip_tags($tpl->convertRelativePaths($notif['message'])) !!}</span>
-                            </a>
-                        </li>
-                    @endforeach
+                        @foreach ($activityNotifications as $notif)
+                            @include('menu::partials.notificationListItem', ['notif' => $notif])
+                        @endforeach
+                    @endif
                 </ul>
 
                 <ul id='mentionsList' style='display:none;' class='notificationViewLists'>
@@ -123,29 +119,8 @@
                         <p style="padding: 10px">{{ __('text.no_notifications') }}</p>
                     @endif
 
-                    @foreach ($notifications as $notif)
-                        @if ($notif['type'] != 'mention')
-                            @continue
-                        @endif
-
-                        <li
-                            @if ($notif['read'] == 0)
-                                class='new'
-                            @endif
-                            data-url="{{ $notif['url'] }}"
-                            data-id="{{ $notif['id'] }}"
-                        >
-                            <a href="{{ $notif['url'] }}">
-                                <span class="notificationProfileImage">
-                                    <img src="{{ BASE_URL }}/api/users?profileImage={{ $notif['authorId'] }}"/>
-                                </span>
-                                <span class="notificationDate">
-                                    {{ format($notif['datetime'])->date() }}
-                                    {{ format($notif['datetime'])->time() }}
-                                </span>
-                                <span class="notificationTitle">{!! strip_tags($tpl->convertRelativePaths($notif['message'])) !!}</span>
-                            </a>
-                        </li>
+                    @foreach ($mentionNotifications as $notif)
+                        @include('menu::partials.notificationListItem', ['notif' => $notif])
                     @endforeach
                 </ul>
 
