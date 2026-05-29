@@ -117,6 +117,7 @@ class DatabaseHelper
         return match ($this->db->getDriverName()) {
             'mysql' => "DATE_FORMAT({$column}, '{$format}')",
             'pgsql' => "TO_CHAR({$column}, '{$this->convertDateFormatToPostgres($format)}')",
+            'sqlite' => $this->convertDateFormatToSqlite($column, $format),
             'sqlsrv' => "FORMAT({$column}, '{$this->convertDateFormatToMsSql($format)}')",
             default => "DATE_FORMAT({$column}, '{$format}')", // fallback to MySQL syntax
         };
@@ -170,6 +171,69 @@ class DatabaseHelper
         ];
 
         return str_replace(array_keys($conversions), array_values($conversions), $mysqlFormat);
+    }
+
+    /**
+     * Convert MySQL DATE_FORMAT format string to a SQLite expression.
+     *
+     * SQLite does not implement DATE_FORMAT, so we build an equivalent
+     * expression from strftime() and CASE fragments for the limited format
+     * tokens Leantime currently uses in queries.
+     */
+    private function convertDateFormatToSqlite(string $column, string $mysqlFormat): string
+    {
+        $tokenExpressions = [
+            '%Y' => "strftime('%Y', {$column})",
+            '%y' => "substr(strftime('%Y', {$column}), 3, 2)",
+            '%m' => "strftime('%m', {$column})",
+            '%d' => "strftime('%d', {$column})",
+            '%e' => "CAST(CAST(strftime('%d', {$column}) AS INTEGER) AS TEXT)",
+            '%H' => "strftime('%H', {$column})",
+            '%i' => "strftime('%M', {$column})",
+            '%s' => "strftime('%S', {$column})",
+            '%W' => "CASE CAST(strftime('%w', {$column}) AS INTEGER)
+                WHEN 0 THEN 'Sunday'
+                WHEN 1 THEN 'Monday'
+                WHEN 2 THEN 'Tuesday'
+                WHEN 3 THEN 'Wednesday'
+                WHEN 4 THEN 'Thursday'
+                WHEN 5 THEN 'Friday'
+                WHEN 6 THEN 'Saturday'
+            END",
+            '%M' => "CASE CAST(strftime('%m', {$column}) AS INTEGER)
+                WHEN 1 THEN 'January'
+                WHEN 2 THEN 'February'
+                WHEN 3 THEN 'March'
+                WHEN 4 THEN 'April'
+                WHEN 5 THEN 'May'
+                WHEN 6 THEN 'June'
+                WHEN 7 THEN 'July'
+                WHEN 8 THEN 'August'
+                WHEN 9 THEN 'September'
+                WHEN 10 THEN 'October'
+                WHEN 11 THEN 'November'
+                WHEN 12 THEN 'December'
+            END",
+        ];
+
+        $parts = [];
+        $length = strlen($mysqlFormat);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $mysqlFormat[$i];
+            if ($char === '%' && $i + 1 < $length) {
+                $token = $char.$mysqlFormat[$i + 1];
+                if (isset($tokenExpressions[$token])) {
+                    $parts[] = $tokenExpressions[$token];
+                    $i++;
+                    continue;
+                }
+            }
+
+            $parts[] = "'".str_replace("'", "''", $char)."'";
+        }
+
+        return implode(' || ', $parts);
     }
 
     /**

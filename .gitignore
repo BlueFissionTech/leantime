@@ -145,3 +145,9 @@ tests/Httprequests/http-client.private.env.json
 /AGENTS.md
 /AGENTS.behavior.md
 /harness.json
+
+# Local environment and branch-local SQLite state
+/.env
+/.env.*
+!/.env.example
+/database/database.sqlite
