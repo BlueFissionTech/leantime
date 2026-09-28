@@ -1426,12 +1426,54 @@ min-width: 1200px
         box-sizing: border-box;
     }
 
+    .nyroModalCont .ticket-modal-shell {
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    .nyroModalCont .ticket-modal-shell > .tw-float-right {
+        float: none !important;
+        display: block;
+        padding: 5px 0 10px 0 !important;
+    }
+
     /* Override fixed min-width from base CSS - key fix for task modal */
     .nyroModalCont .row .regRight {
         min-width: auto !important;
         max-width: 100% !important;
         width: 100% !important;
         box-sizing: border-box;
+    }
+
+    .nyroModalCont .ticket-details-layout > [class*="col-md-"] {
+        float: none;
+        width: 100%;
+    }
+
+    .nyroModalCont .ticket-meta-row {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .nyroModalCont .ticket-meta-row > .control-label {
+        display: block;
+        width: 100% !important;
+        margin: 0 0 6px 0 !important;
+    }
+
+    .nyroModalCont .ticket-meta-row > div {
+        width: 100%;
+        padding-top: 0 !important;
+    }
+
+    .nyroModalCont .ticket-modal-shell .main-title-input,
+    .nyroModalCont .ticket-modal-shell .chosen-container,
+    .nyroModalCont .ticket-modal-shell .user-select,
+    .nyroModalCont .ticket-modal-shell input[type="text"],
+    .nyroModalCont .ticket-modal-shell input[type="time"],
+    .nyroModalCont .ticket-modal-shell select {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 
     /* Ensure modal close button stays visible */
@@ -1481,6 +1523,11 @@ min-width: 1200px
     .nyroModalCont .row > div {
         padding-left: 5px !important;
         padding-right: 5px !important;
+    }
+
+    .nyroModalCont .ticket-modal-shell .sticky-modal-footer input[type="submit"] {
+        width: 100%;
+        margin-bottom: 8px;
     }
 
     .maincontentinner {
