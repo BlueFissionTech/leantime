@@ -20,7 +20,7 @@ $isBlocked = (bool) $tpl->get('isBlocked');
     window.leantime.activeTicketTab = <?= json_encode((string) ($tpl->get('activeTab') ?? '')) ?>;
 </script>
 
-<div style="min-width:70%">
+<div class="ticket-modal-shell" style="min-width:70%">
 
     <?php echo $tpl->displayNotification(); ?>
 
