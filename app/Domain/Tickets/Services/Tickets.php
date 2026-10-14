@@ -428,17 +428,38 @@ class Tickets
 
     public function getProjectSheetExport(array $params): array
     {
+        return $this->getProjectSheetExportWithEvidence($params)['rows'];
+    }
+
+    /**
+     * Export read evidence describes this filtered query, not a project-wide snapshot.
+     * Keep the row-only method for existing service callers.
+     */
+    public function getProjectSheetExportWithEvidence(array $params): array
+    {
+        $limit = 10000;
         $searchCriteria = $this->prepareTicketSearchArray($params);
         $searchCriteria['currentProject'] = (int) ($params['currentProject'] ?? $params['projectId'] ?? 0);
+        $result = [
+            'rows' => [],
+            'count' => 0,
+            'projectId' => $searchCriteria['currentProject'],
+            'updatedSince' => $params['updated_since'] ?? $params['updatedSince'] ?? null,
+            'evidence' => [
+                'schemaVersion' => 1,
+                'scope' => 'filtered_project_query',
+                'observedAt' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'queryComplete' => false,
+                'reason' => null,
+                'retrievedCount' => null,
+                'limit' => $limit,
+            ],
+        ];
 
         if (($searchCriteria['currentProject'] ?? 0) <= 0) {
-            return [];
-        }
+            $result['evidence']['reason'] = 'invalid_project';
 
-        $tickets = $this->getAll($searchCriteria, 10000);
-
-        if (! is_array($tickets)) {
-            return [];
+            return $result;
         }
 
         $updatedSince = null;
@@ -448,11 +469,29 @@ class Tickets
             try {
                 $updatedSince = CarbonImmutable::parse($updatedSinceValue);
             } catch (\Throwable $e) {
-                $updatedSince = null;
+                $result['evidence']['reason'] = 'invalid_updated_since';
+
+                return $result;
             }
         }
 
-        return $this->projectSheetExportFormatter->format($tickets, $updatedSince);
+        $tickets = $this->getAll($searchCriteria, $limit);
+
+        if (! is_array($tickets)) {
+            $result['evidence']['reason'] = 'source_unavailable';
+
+            return $result;
+        }
+
+        // The cursor filter runs after retrieval; count before filtering so an
+        // apparently short delta cannot hide a capped source query.
+        $result['evidence']['retrievedCount'] = count($tickets);
+        $result['evidence']['queryComplete'] = count($tickets) < $limit;
+        $result['evidence']['reason'] = count($tickets) < $limit ? null : 'limit_reached';
+        $result['rows'] = $this->projectSheetExportFormatter->format($tickets, $updatedSince);
+        $result['count'] = count($result['rows']);
+
+        return $result;
     }
 
     private function decorateTicketsForDisplay(array $tickets): array
