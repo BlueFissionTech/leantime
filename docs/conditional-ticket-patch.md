@@ -1,9 +1,10 @@
-# Conditional ticket patch — request contract, draft v1
+# Conditional ticket patch — request and SQLite storage contract, draft v1
 
 Partial implementation of #159. This change supplies an immutable request value
-object and deterministic receipt-binding fingerprint. **There is no callable
-HTTP/JSON-RPC patch endpoint, durable receipt store, or atomic update in this
-change. It must not enable integration writes.** Existing write APIs are unchanged.
+object and an executable SQLite transaction/receipt conformance adapter.
+**There is no callable HTTP/JSON-RPC patch endpoint or production schema/adoption
+in this change. It must not enable integration writes.** Existing write APIs are
+unchanged. The disposable storage proof is described below.
 
 ## Implemented contract
 
@@ -16,7 +17,8 @@ ID before sending; do not generate a replacement after an uncertain response.
 
 The proposed version namespace is `ticket-revision-v1:<positive decimal>` (up to
 19 digits). This is a format check, not proof that a token was issued or current.
-No version issuer exists yet. The legacy `modified` timestamp is not accepted.
+The disposable SQLite contract issues these tokens; production does not yet.
+The legacy `modified` timestamp is not accepted.
 
 The initial allowlist is deliberately text-only: `headline` (nonblank, at most
 255 UTF-8 bytes), `description` and `acceptanceCriteria` (at most 65,535 UTF-8
@@ -39,7 +41,50 @@ that key, not silently treat it as a new operation.
 fields, preserving everything else. It performs no version check or write and
 must never be used as read-then-update concurrency control.
 
-## Required storage and adoption work (not implemented)
+## Implemented SQLite storage proof
+
+`SqliteConditionalTicketStore` uses the existing Laravel database connection,
+requires driver `sqlite`, an explicitly installed contract marker and all six
+revision triggers, and refuses an existing outer transaction. It never installs
+a schema. `tests/Fixtures/ConditionalTicketDatabase.php` creates a new disposable
+database for each test; it is not registered with the application migrator.
+
+- `execute(intent)` acquires SQLite's writer lock before reading access, ticket,
+  revision or receipt. A SQL expected-revision predicate gates the text update.
+  Same-connection history, revision, receipt and outbox rows commit together.
+  No-op and stale-version outcomes also receive immutable receipts. Denials and
+  storage failures do not receive success receipts.
+- `readVersion(actor, project, ticket)` supplies a current token after the supplied
+  access policy approves; `readReceipt(intent)` performs a read-only authorized
+  lookup and returns the original committed result. Exact replay rechecks current
+  write permission and returns that same result without another ticket mutation.
+  A missing receipt returns `unknown`, not permission to retry or proof of failure.
+- The required access closure receives the same connection and exact actor,
+  project, ticket and `read`/`write` action, inside the transaction. Only literal
+  `true` authorizes. Tests use a SQL access fixture; this is **not the production
+  role/project policy implementation**. The future adapter must derive identity
+  from authentication and use current same-transaction policy, not session caches.
+- Append-only AUTOINCREMENT revision events cover every ticket INSERT/UPDATE/DELETE
+  and every Ticket endpoint of relation INSERT/UPDATE/DELETE, including previous
+  and new endpoints. Retaining these events prevents token reuse after same-second
+  or ABA edits and deletion/reinsertion. Triggers apply to raw SQL too, not just
+  this adapter. Committed revision history must not be purged/reset at adoption.
+- The allowlist remains text-only. Parent, collaborators, dependencies, workflow,
+  dates and custom data are preserved, not edited by this adapter. Relation writes
+  nevertheless invalidate earlier tokens. History includes explicit empty text.
+- An outbox intent is persisted once per applied operation; no event handler,
+  notification or external delivery is invoked. The payload contains changed field
+  names and identities/version, not text values. Delivery is not implemented.
+- Two independent connections to the same disposable file exercise overlapping
+  writer locks, duplicate operations and stale competitors. These are SQLite
+  session-overlap tests, not multi-process MySQL concurrency or crash/power-loss
+  durability proof. Reopening the database verifies committed receipt recovery.
+- Injected SQL failures in history, outbox and receipt insertion roll back the
+  ticket/revision and all effects, including a synthetic relational trigger effect.
+  There are no automatic write retries. Exceptions return failure/unknown outcome;
+  commit ambiguity must be reconciled by authorized receipt lookup.
+
+## Remaining production adoption gates
 
 1. Review migration/version issuance and receipt retention policy before applying
    any schema change. Every relevant writer must advance a non-reused revision,
@@ -65,11 +110,23 @@ must never be used as read-then-update concurrency control.
    responses, transaction rollback and notification behavior on an approved
    synthetic storage/API setup before independent review and staging adoption.
 
-Source evidence: `Tickets::updateTicket` supplies defaults for omissions and
-coordinates dependency/notification/parent effects outside the repository write;
-repository `updateTicket`, `patchTicket`, `updateTicketStatus` predicate by ID and
-record history separately. Adding a conditional wrapper around those methods is
-not sufficient. The initial text-only subset does not waive these requirements.
+Exact source gap: the PR base `f6a9434` has repository `updateTicket`, `patchTicket`,
+`updateTicketStatus` and bulk sorting writes predicated by ID, history recorded
+separately, collaborator writes in `zp_entity_relationship`, and service events
+outside a transaction. `Projects::isUserAssignedToProject` delegates to a policy
+that can resolve users through the application container and includes global-role,
+client and project membership rules; it is not this fixture's simple access table.
+The inspected integration branch `cc90a646` additionally has dependency scheduling,
+auto-reschedule relation flags and parent completion, absent from this PR's base.
+Its dependency repository also uses `zp_entity_relationship` Ticket endpoints.
+
+Smallest next owner fixes: adopt the reviewed revision/receipt/outbox schema and
+writer coverage for the intended production engine, implement a same-connection
+current role/project policy adapter, reconcile the dependency-bearing integration
+branch, then expose the text-only API with real-engine rollback/permission/concurrent
+proof and a reviewed outbox consumer. Do not add a conditional wrapper around
+legacy multi-step writes, claim the fixture covers uninspected extensions, or
+expose workflow/status patches before their larger transactional scope is proved.
 
 ## Validation
 
@@ -77,10 +134,14 @@ With existing dependencies, from the checkout root:
 
 ```sh
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/ConditionalTicketPatch.php tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
+php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Repositories/SqliteConditionalTicketStore.php tests/Fixtures/ConditionalTicketDatabase.php tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
 ```
 
-These are pure request/preview tests, not API, SQL concurrency, authorization or
-durability proof. No migrations, runtime registrations, dependencies or services
-are added. Keep #159 open and the review draft until the missing adoption gates
-are separately satisfied. Deployment and live reconciliation remain unapproved.
+Tests use existing PDO SQLite and Laravel dependencies without application boot
+or environment credentials. They now prove the bounded SQLite storage behavior,
+not the production API/authorization/deployed engine. No application migrations,
+runtime registrations, dependencies or services are added. Keep #159 open and the
+review draft until remaining adoption gates are satisfied. Deployment and live
+reconciliation remain unapproved.
