@@ -61,9 +61,10 @@ database for each test; it is not registered with the application migrator.
   A missing receipt returns `unknown`, not permission to retry or proof of failure.
 - The required access closure receives the same connection and exact actor,
   project, ticket and `read`/`write` action, inside the transaction. Only literal
-  `true` authorizes. Tests use a SQL access fixture; this is **not the production
-  role/project policy implementation**. The future adapter must derive identity
-  from authentication and use current same-transaction policy, not session caches.
+  `true` authorizes. The original storage tests use a synthetic SQL access table;
+  the additional current-project policy tests use the application's table and role
+  semantics described below. Authentication and production-engine isolation are
+  still not integrated.
 - Append-only AUTOINCREMENT revision events cover every ticket INSERT/UPDATE/DELETE
   and every Ticket endpoint of relation INSERT/UPDATE/DELETE, including previous
   and new endpoints. Retaining these events prevents token reuse after same-second
@@ -83,6 +84,40 @@ database for each test; it is not registered with the application migrator.
   ticket/revision and all effects, including a synthetic relational trigger effect.
   There are no automatic write retries. Exceptions return failure/unknown outcome;
   commit ambiguity must be reconciled by authorized receipt lookup.
+
+## Current project authorization adapter
+
+`CurrentProjectTicketAccess` is an invokable policy for the store. Pass
+`Closure::fromCallable(new CurrentProjectTicketAccess())` as its access closure.
+It reads `zp_user`, `zp_projects`, `zp_relationuserproject` and the exact ticket
+destination through the transaction's supplied connection, not the application
+container or cached session permissions. The default role provider calls
+`Roles::getRoles()` on every check, preserving the `available_roles` filter.
+
+The policy follows `Projects::isUserAssignedToProject` for global admin/owner,
+organization-visible projects, matching clients and explicit project membership.
+It follows `Auth::getRoleToCheck` for project-role overrides: manager/admin/owner
+retain the global role; other members use an explicit project role or inherit.
+Reads require at least readonly, writes at least editor in the current filtered
+role map. Membership alone does not confer write permission. A manager without
+project access is not treated as an admin.
+
+Intentional fail-closed restrictions requiring review: only active status `a`
+qualifies (including API users); missing users/projects/tickets, unknown roles,
+ambiguous duplicate memberships/role names, unsupported actions, and absent
+transactions deny. Client matching requires a positive client ID, not two unset
+IDs. Storage catches schema/filter failures without writing a success receipt.
+No new session, API key, actor impersonation or endpoint is introduced; trusted
+actor identity must still come from the eventual authentication integration.
+
+Tests use disposable SQLite tables with real policy column names and inject the
+role map to avoid application boot or environment credentials. They cover role
+overrides, revoked write/read access before replay/readback, exact destination,
+missing schema and filtered-role changes. They do **not** prove deployed ACL,
+plugin-filter behavior or MySQL isolation. SQLite's existing pre-read writer lock
+serializes access changes with writes; a future engine adapter must supply its
+own equivalent authorization/concurrency guarantees. Do not reuse the policy
+with an arbitrary read-committed transaction and assume that guarantee.
 
 ## Remaining production adoption gates
 
@@ -121,8 +156,8 @@ auto-reschedule relation flags and parent completion, absent from this PR's base
 Its dependency repository also uses `zp_entity_relationship` Ticket endpoints.
 
 Smallest next owner fixes: adopt the reviewed revision/receipt/outbox schema and
-writer coverage for the intended production engine, implement a same-connection
-current role/project policy adapter, reconcile the dependency-bearing integration
+writer coverage for the intended production engine, qualify the current role/project
+policy under that engine's concurrency and application filters, reconcile the dependency-bearing integration
 branch, then expose the text-only API with real-engine rollback/permission/concurrent
 proof and a reviewed outbox consumer. Do not add a conditional wrapper around
 legacy multi-step writes, claim the fixture covers uninspected extensions, or
@@ -135,8 +170,10 @@ With existing dependencies, from the checkout root:
 ```sh
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/ConditionalTicketPatch.php tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Repositories/SqliteConditionalTicketStore.php tests/Fixtures/ConditionalTicketDatabase.php tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
+php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/CurrentProjectTicketAccess.php tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 ```
 
 Tests use existing PDO SQLite and Laravel dependencies without application boot
