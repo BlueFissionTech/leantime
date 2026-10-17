@@ -171,13 +171,15 @@ Source-callable `Leantime\Domain\Tickets\Services\ConditionalTickets` methods:
 - `readSnapshot(array $request): array`: same exact identity request; returns only
   headline, description and acceptanceCriteria with identity and issued revision
   from one current-authorized transaction. Preserve stored null versus empty values.
+- `readReadiness(array $request): array`: same exact identity request; read-only
+  observation of selected API actor, current write access and readiness gates.
 - `readReceipt(array $request): array`: full original patch intent for authorized
   uncertain-send readback, with actor derived from authentication.
 - `patch(array $request): array`: full text-only intent; original correlated result
   on exact replay. Missing receipts remain unknown, never retry authorization.
 
 The portable RPC prefix is `leantime.rpc.tickets.conditional_tickets`, followed by
-`.readVersion`, `.readSnapshot`, `.readReceipt` or `.patch`. The earlier proposed
+`.readVersion`, `.readSnapshot`, `.readReadiness`, `.readReceipt` or `.patch`. The earlier proposed
 `conditionaltickets` segment does not retain the PSR-4 class capitalization on
 case-sensitive filesystems. The actual JSON-RPC controller's POST body parsing,
 discovery, named argument preparation, response correlation and service dispatch
@@ -209,7 +211,47 @@ SQLite fixture. A later edit changes the issued token and rejects the stale patc
 MySQL uses the existing shared writer guard for this read; engine proof is pending.
 HTTP 200 alone is not success: inspect the correlated JSON-RPC result/error and
 state. Disabled, missing/invalid API authentication, session-only authentication
-and unsupported-storage outcomes are explicitly covered for all four methods.
+and unsupported-storage outcomes are explicitly covered for all five methods.
+
+### Current actor and write readiness
+
+No existing combined current-API-actor/conditional-write-admission method was
+identified in the inspected Auth, API, Users and Tickets services. Use
+`leantime.rpc.tickets.conditional_tickets.readReadiness` with
+`params.request={"projectId":7,"ticketId":12}`. Unknown fields (including actorId,
+canPatch and flags), string IDs and nonpositive IDs reject. The selected guard must
+be an actual `ApiGuard`; no cookie/session guard or caller identity is accepted.
+Only a validated positive API actor ID is returned; no API key, email, role list,
+ticket text or credential data is exposed. Disabled capability does not resolve
+guard or storage and reports actorId=null, not a guessed account.
+
+Response contract `ticket-write-readiness-v1` contains `state`, `reason`, actorId,
+requested projectId/ticketId, `writeAccess`, `schemaReady`, `outboxReady`,
+`runtimeQualified` and `canPatch`. Nullable checks mean **unknown**, never false
+or true by inference. Invalid/unavailable auth is denied; config off is disabled;
+factory/driver/schema failure is unknown. Once storage/schema permits inspection,
+the existing same-connection `CurrentProjectTicketAccess` is evaluated for **write**,
+not merely read access. Missing/foreign/revoked/inactive/readonly destinations deny
+without ticket content. The MySQL observer uses the existing transaction/guard
+lock and validated schema, then reads the outbox marker without modifying it.
+
+In this source, `canPatch=false` and `runtimeQualified=false` **always**: the
+production notification adapter is not qualified. An enabled outbox marker alone
+therefore returns unknown/notification_adapter_unqualified, not readiness. The
+fixture-only SQLite adapter can report writeAccess=true but cannot establish
+production schema/outbox readiness. Example synthetic result:
+
+```json
+{"state":"unknown","reason":"readiness_adapter_unqualified","contract":"ticket-write-readiness-v1","actorId":8,"projectId":7,"ticketId":12,"writeAccess":true,"schemaReady":null,"outboxReady":null,"runtimeQualified":false,"canPatch":false}
+```
+
+This is observation, not a reservation or durable permission: a future qualified
+writer must still recheck current gates/ACL/version when applying. Consumers must
+not dispatch from writeAccess alone, caller flags or earlier cached readiness.
+No DDL, DML, receipt/outbox event or external resource action is performed by this
+readiness path. SQLite total_changes is unchanged in the executable fixture.
+Actual authentication-provider session behavior, MySQL locks/metadata and full
+HTTP/deployed routing remain outside the synthetic proof and require qualification.
 
 Three independent gates remain OFF: server config
 `tickets.conditional_patch.enabled` must be literal boolean true (default false),
@@ -339,6 +381,7 @@ php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-n
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketEndpointTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketRpcTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketReadinessTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalNotificationQueueTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/MysqlConditionalTicketSchemaTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Integration/ConditionalTicketMysqlTest.php

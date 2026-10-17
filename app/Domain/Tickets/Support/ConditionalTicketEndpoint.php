@@ -5,6 +5,7 @@ namespace Leantime\Domain\Tickets\Support;
 use Closure;
 use Illuminate\Contracts\Auth\Guard;
 use InvalidArgumentException;
+use Leantime\Domain\Auth\Guards\ApiGuard;
 use Leantime\Domain\Tickets\Repositories\ConditionalTicketStore;
 use Throwable;
 
@@ -15,12 +16,35 @@ final class ConditionalTicketEndpoint
 
     public function call(string $action, array $request): array
     {
+        $actorId = null;
+        $result = $this->dispatch($action, $request, $actorId);
+        if ($action !== 'readReadiness') {
+            return $result;
+        }
+        if ($result['state'] === 'failure') {
+            $result['state'] = $result['reason'] === 'capability_disabled' ? 'disabled' : 'unknown';
+        }
+        $keys = array_keys($request);
+        sort($keys);
+        $scope = $keys === ['projectId', 'ticketId'] && is_int($request['projectId'])
+            && is_int($request['ticketId']) && min($request) > 0;
+
+        return array_merge(['writeAccess' => null, 'schemaReady' => null, 'outboxReady' => null], $result, [
+            'contract' => 'ticket-write-readiness-v1', 'actorId' => $actorId,
+            'projectId' => $scope ? $request['projectId'] : null, 'ticketId' => $scope ? $request['ticketId'] : null,
+            // No qualified production notification adapter is installed in this source.
+            'canPatch' => false, 'runtimeQualified' => false,
+        ]);
+    }
+
+    private function dispatch(string $action, array $request, ?int &$actorId): array
+    {
         if (! $this->enabled) {
             return ['state' => 'failure', 'reason' => 'capability_disabled'];
         }
         try {
             $guard = ($this->guard)();
-            if (! $guard instanceof Guard || ! $guard->check()) {
+            if (! $guard instanceof Guard || ($action === 'readReadiness' && ! $guard instanceof ApiGuard) || ! $guard->check()) {
                 return ['state' => 'denied', 'reason' => 'unauthenticated'];
             }
             $actor = $guard->id();
@@ -28,8 +52,9 @@ final class ConditionalTicketEndpoint
                 || (string) (int) $actor !== (string) $actor) {
                 return ['state' => 'denied', 'reason' => 'unauthenticated'];
             }
+            $actorId = (int) $actor;
             $intent = null;
-            if (in_array($action, ['readVersion', 'readSnapshot'], true)) {
+            if (in_array($action, ['readVersion', 'readSnapshot', 'readReadiness'], true)) {
                 $keys = array_keys($request);
                 sort($keys);
                 if ($keys !== ['projectId', 'ticketId'] || ! is_int($request['projectId'])
@@ -49,6 +74,7 @@ final class ConditionalTicketEndpoint
             return match ($action) {
                 'readVersion' => $store->readVersion((int) $actor, $request['projectId'], $request['ticketId']),
                 'readSnapshot' => $store->readSnapshot((int) $actor, $request['projectId'], $request['ticketId']),
+                'readReadiness' => $store->readReadiness((int) $actor, $request['projectId'], $request['ticketId']),
                 'readReceipt' => $store->readReceipt($intent),
                 'patch' => $store->execute($intent),
             };

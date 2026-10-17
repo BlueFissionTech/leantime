@@ -83,7 +83,15 @@ final class ConditionalTicketRpcTest extends TestCase
             self::assertArrayNotHasKey('error', $decoded);
             self::assertSame($reason, $decoded['result']['reason']);
             // Valid synthetic API auth reaches storage, which deliberately rejects SQLite.
-            self::assertSame($mode === 'session' || $mode === 'missing' || $mode === 'invalid' ? 'denied' : 'failure', $decoded['result']['state']);
+            $state = $mode === 'session' || $mode === 'missing' || $mode === 'invalid' ? 'denied' : 'failure';
+            if ($method === 'readReadiness') {
+                $state = $mode === 'disabled' ? 'disabled' : ($mode === 'valid' ? 'unknown' : 'denied');
+                self::assertSame('ticket-write-readiness-v1', $decoded['result']['contract']);
+                self::assertFalse($decoded['result']['canPatch']);
+                self::assertFalse($decoded['result']['runtimeQualified']);
+                self::assertSame($mode === 'valid' ? 8 : null, $decoded['result']['actorId']);
+            }
+            self::assertSame($state, $decoded['result']['state']);
         } finally {
             $connection->disconnect();
             Container::setInstance($previous);
@@ -93,7 +101,7 @@ final class ConditionalTicketRpcTest extends TestCase
     public static function requests(): array
     {
         $cases = [];
-        foreach (['readVersion', 'readSnapshot', 'readReceipt', 'patch'] as $method) {
+        foreach (['readVersion', 'readSnapshot', 'readReadiness', 'readReceipt', 'patch'] as $method) {
             $request = ['projectId' => 7, 'ticketId' => 12];
             if (in_array($method, ['readReceipt', 'patch'], true)) {
                 $request += ['operationId' => 'rpc-test', 'expectedVersion' => 'ticket-revision-v1:1', 'patch' => ['description' => '']];

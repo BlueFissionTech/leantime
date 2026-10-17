@@ -82,8 +82,14 @@ final class ConditionalTicketMysqlTest extends TestCase
             ]);
             $first = $intent('mysql-first', $version['version']);
             self::assertSame('outbox_not_qualified', $store->execute($first)['reason']);
+            $readiness = $store->readReadiness(8, 7, 12);
+            self::assertSame('disabled', $readiness['state']);
+            self::assertTrue($readiness['writeAccess']);
+            self::assertTrue($readiness['schemaReady']);
+            self::assertFalse($readiness['outboxReady']);
             // Test-only marker; this does NOT qualify a real notification consumer.
             $db->table('zp_ticket_patch_guard')->update(['outboxReady' => 1]);
+            self::assertSame('notification_adapter_unqualified', $store->readReadiness(8, 7, 12)['reason']);
             $applied = $store->execute($first);
             self::assertSame('applied', $applied['state']);
             self::assertSame(str_repeat('text', 200), $db->table('zp_tickethistory')->value('changeValue'));

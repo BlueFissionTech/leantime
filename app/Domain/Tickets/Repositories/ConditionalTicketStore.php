@@ -117,6 +117,24 @@ abstract class ConditionalTicketStore
         });
     }
 
+    /** Read-only admission observation, never a lease or permission to skip write checks. */
+    public function readReadiness(int $actorId, int $projectId, int $ticketId): array
+    {
+        return $this->transaction(false, function () use ($actorId, $projectId, $ticketId): array {
+            if ($this->authorizedTicket($actorId, $projectId, $ticketId, 'write') === null) {
+                return ['state' => 'denied', 'reason' => 'destination_or_write_access', 'writeAccess' => false];
+            }
+
+            return $this->writeReadiness() + ['writeAccess' => true];
+        });
+    }
+
+    /** Fixture/unknown adapters must not advertise production write readiness. */
+    protected function writeReadiness(): array
+    {
+        return ['state' => 'unknown', 'reason' => 'readiness_adapter_unqualified'];
+    }
+
     abstract protected function transaction(bool $write, Closure $work): array;
 
     abstract protected function update(ConditionalTicketPatch $intent, array $changes): int;

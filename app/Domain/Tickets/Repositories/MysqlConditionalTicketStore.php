@@ -51,6 +51,17 @@ final class MysqlConditionalTicketStore extends ConditionalTicketStore
             ->where('projectId', $intent->projectId)->update($changes);
     }
 
+    protected function writeReadiness(): array
+    {
+        // Called only after the same-connection guard lock, schema check and write ACL.
+        $gate = $this->connection->table('zp_ticket_patch_guard')->where('id', 1)->first();
+        $outbox = $gate !== null && (int) $gate->outboxReady === 1;
+
+        return ['state' => $outbox ? 'unknown' : 'disabled',
+            'reason' => $outbox ? 'notification_adapter_unqualified' : 'outbox_not_qualified',
+            'schemaReady' => true, 'outboxReady' => $outbox];
+    }
+
     private function assertSchema(): void
     {
         $schema = $this->connection->getDatabaseName();
