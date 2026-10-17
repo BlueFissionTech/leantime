@@ -9,6 +9,7 @@ use Leantime\Core\UI\Theme;
 use Leantime\Domain\Auth\Services\Auth as AuthService;
 use Leantime\Domain\Help\Services\Helper;
 use Leantime\Domain\Menu\Repositories\Menu as MenuRepo;
+use Leantime\Domain\Menu\Support\NotificationSegments;
 use Leantime\Domain\Notifications\Services\Notifications as NotificationService;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
 use Leantime\Domain\Users\Services\Users as UserService;
@@ -56,34 +57,13 @@ class HeadMenu extends Composer
      */
     public function with(): array
     {
-        // Fetch all notifications once, then filter for unread in PHP
-        // instead of making two separate DB queries
         $notifications = [];
         if (session()->exists('userdata')) {
             $notifications = $this->notificationService->getAllNotifications(session('userdata.id'));
         }
 
-        $nCount = is_array($notifications) ? count(array_filter($notifications, fn ($n) => ($n['read'] ?? 1) == 0)) : 0;
-        $totalNotificationCount =
-        $totalMentionCount =
-        $totalNewMentions =
-        $totalNewNotifications = 0;
-
+        $notificationSegments = NotificationSegments::partition(is_array($notifications) ? $notifications : []);
         $menuType = $this->menuRepo->getSectionMenuType(FrontcontrollerCore::getCurrentRoute(), 'project');
-
-        foreach ($notifications as $notif) {
-            if ($notif['type'] == 'mention') {
-                $totalMentionCount++;
-                if ($notif['read'] == 0) {
-                    $totalNewMentions++;
-                }
-            } else {
-                $totalNotificationCount++;
-                if ($notif['read'] == 0) {
-                    $totalNewNotifications++;
-                }
-            }
-        }
 
         $user = false;
         if (session()->exists('userdata')) {
@@ -102,13 +82,20 @@ class HeadMenu extends Composer
         }
 
         return [
-            'newNotificationCount' => $nCount,
-            'totalNotificationCount' => $totalNotificationCount,
-            'totalMentionCount' => $totalMentionCount,
-            'totalNewMentions' => $totalNewMentions,
-            'totalNewNotifications' => $totalNewNotifications,
+            'newNotificationCount' => $notificationSegments['counts']['unreadTotal'],
+            'totalNotificationCount' => $notificationSegments['counts']['totalNotificationCount'],
+            'totalActivityCount' => $notificationSegments['counts']['totalActivityCount'],
+            'totalCommentCount' => $notificationSegments['counts']['totalCommentCount'],
+            'totalMentionCount' => $notificationSegments['counts']['totalMentionCount'],
+            'totalNewActivity' => $notificationSegments['counts']['totalNewActivity'],
+            'totalNewComments' => $notificationSegments['counts']['totalNewComments'],
+            'totalNewMentions' => $notificationSegments['counts']['totalNewMentions'],
+            'totalNewNotifications' => $notificationSegments['counts']['totalNewNotifications'],
             'menuType' => $menuType,
             'notifications' => $notifications ?? [],
+            'commentNotifications' => $notificationSegments['comments'],
+            'activityNotifications' => $notificationSegments['activity'],
+            'mentionNotifications' => $notificationSegments['mentions'],
             'onTheClock' => session()->exists('userdata') ? $this->timesheets->isClocked(session('userdata.id')) : false,
             'activePath' => FrontcontrollerCore::getCurrentRoute(),
             'action' => FrontcontrollerCore::getActionName(),

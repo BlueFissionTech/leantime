@@ -171,4 +171,9 @@ class Comments
 
         return $comments;
     }
+
+    public function getRecentProjectStatusUpdates(int $limit = 10): array|false
+    {
+        return $this->commentRepository->getRecentProjectStatusUpdates($limit);
+    }
 }

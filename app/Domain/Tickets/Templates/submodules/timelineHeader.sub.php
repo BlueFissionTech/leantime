@@ -7,6 +7,11 @@ $currentUrlPath = BASE_URL.'/'.str_replace('.', '/', Frontcontroller::getCurrent
 
 $currentSprintId = $tpl->get('currentSprint');
 $searchCriteria = $tpl->get('searchCriteria');
+
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
+
 $searchSprint = $searchCriteria['sprint'] ?? '';
 $sprints = $tpl->get('sprints');
 

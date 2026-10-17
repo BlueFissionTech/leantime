@@ -113,6 +113,9 @@ public/theme/dts/
 nbproject
 config/config.yaml
 config/.env
+/.env
+/.env.*
+!/.env.example
 
 # Documentor
 .phpdoc/cache
@@ -136,6 +139,9 @@ config/.env
 tests/Httprequests/http-client.private.env.json
 .claude/docs/personal-companion-requirements.md
 .claude/docs/git-workflow.md
+/.env
+/.env.*
+!/.env.example
 
 # Blue Fission Codex harness
 /docker/
@@ -145,3 +151,6 @@ tests/Httprequests/http-client.private.env.json
 /AGENTS.md
 /AGENTS.behavior.md
 /harness.json
+/.env
+/.env.*
+!/.env.example

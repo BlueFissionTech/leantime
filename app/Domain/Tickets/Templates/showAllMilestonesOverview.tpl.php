@@ -6,6 +6,10 @@ foreach ($__data as $var => $val) {
 }
 $sprints = $tpl->get('sprints');
 $searchCriteria = $tpl->get('searchCriteria');
+
+if (! is_array($searchCriteria)) {
+    $searchCriteria = [];
+}
 $currentSprint = $tpl->get('currentSprint');
 
 $todoTypeIcons = $tpl->get('ticketTypeIcons');

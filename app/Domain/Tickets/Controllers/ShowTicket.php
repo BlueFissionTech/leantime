@@ -11,6 +11,7 @@ use Leantime\Domain\Comments\Services\Comments as CommentService;
 use Leantime\Domain\Files\Services\Files as FileService;
 use Leantime\Domain\Projects\Services\Projects as ProjectService;
 use Leantime\Domain\Sprints\Services\Sprints as SprintService;
+use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies as TicketdependencyService;
 use Leantime\Domain\Supportcenter\Services\GithubElevation;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 use Leantime\Domain\Timesheets\Services\Timesheets as TimesheetService;
@@ -35,6 +36,7 @@ class ShowTicket extends Controller
 
     private UserService $userService;
 
+    private TicketdependencyService $ticketdependencyService;
     private GithubElevation $githubElevation;
 
     public function init(
@@ -45,6 +47,7 @@ class ShowTicket extends Controller
         CommentService $commentService,
         TimesheetService $timesheetService,
         UserService $userService,
+        TicketdependencyService $ticketdependencyService,
         GithubElevation $githubElevation
     ): void {
         $this->projectService = $projectService;
@@ -54,6 +57,7 @@ class ShowTicket extends Controller
         $this->commentService = $commentService;
         $this->timesheetService = $timesheetService;
         $this->userService = $userService;
+        $this->ticketdependencyService = $ticketdependencyService;
         $this->githubElevation = $githubElevation;
 
         if (session()->exists('lastPage') === false) {
@@ -114,67 +118,7 @@ class ShowTicket extends Controller
 
         }
 
-        $this->tpl->assign('ticket', $ticket);
-        $this->tpl->assign('ticketParents', $this->ticketService->getAllPossibleParents($ticket));
-        $this->tpl->assign('statusLabels', $this->ticketService->getStatusLabels());
-        $this->tpl->assign('ticketTypes', $this->ticketService->getTicketTypes());
-        $this->tpl->assign('ticketTypeIcons', $this->ticketService->getTypeIcons());
-        $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
-        $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
-
-        $allProjectMilestones = $this->ticketService->getAllMilestones([
-            'sprint' => '',
-            'type' => 'milestone',
-            'currentProject' => session('currentProject'),
-        ]);
-        $this->tpl->assign('milestones', $allProjectMilestones);
-        $this->tpl->assign('sprints', $this->sprintService->getAllSprints(session('currentProject')));
-
-        $this->tpl->assign('kind', $this->timesheetService->getLoggableHourTypes());
-        $this->tpl->assign('ticketHours', $this->timesheetService->getLoggedHoursForTicketByDate($id));
-        $this->tpl->assign('userHours', $this->timesheetService->getUsersTicketHours($id, session('userdata.id')));
-
-        $this->tpl->assign('timesheetsAllHours', $this->timesheetService->getSumLoggedHoursForTicket($id));
-        $this->tpl->assign('remainingHours', $this->timesheetService->getRemainingHours($ticket));
-
-        $this->tpl->assign('userInfo', $this->userService->getUser(session('userdata.id')));
-        $this->tpl->assign('users', $this->projectService->getUsersAssignedToProject($ticket->projectId));
-
-        $projectData = $this->projectService->getProject($ticket->projectId);
-        $this->tpl->assign('projectData', $projectData);
-
-        $comments = $this->commentService->getComments('ticket', $id);
-
-        $this->tpl->assign('numComments', count($comments));
-        $this->tpl->assign('comments', $comments);
-
-        $files = $this->fileService->getFilesByModule('ticket', $id);
-        $this->tpl->assign('numFiles', count($files));
-        $this->tpl->assign('files', $files);
-
-        $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
-        $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($id));
-        $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
-        $this->tpl->assign('defaultGithubTitle', $this->githubElevation->getDefaultGithubTitle($ticket));
-        $this->tpl->assign('defaultGithubSummary', $this->githubElevation->getDefaultGithubSummary($ticket));
-
-        $this->tpl->assign('timesheetValues', [
-            'kind' => '',
-            'date' => Carbon::now(session('usersettings.timezone'))->setTimezone('UTC'),
-            'hours' => '',
-            'description' => '',
-        ]);
-
-        // TODO: Refactor thumbnail generation in file manager
-        $this->tpl->assign('imgExtensions', ['jpg', 'jpeg', 'png', 'gif', 'psd', 'bmp', 'tif', 'thm', 'yuv']);
-
-        $allAssignedprojects = $this->projectService->getProjectsUserHasAccessTo(session('userdata.id'), 'open');
-        $this->tpl->assign('allAssignedprojects', $allAssignedprojects);
-
-        $response = $this->tpl->displayPartial('tickets.showTicketModal');
-        $response->headers->set('HX-Trigger', 'ticketUpdate');
-
-        return $response;
+        return $this->renderTicketModal($ticket, $params['tab'] ?? ($_GET['tab'] ?? ''));
     }
 
     /**
@@ -243,7 +187,14 @@ class ShowTicket extends Controller
                 $this->tpl->setNotification($result['message'], $result['ok'] ? 'success' : 'error');
             }
 
+            $freshTicket = $this->ticketService->getTicket($id);
             $tab = '#githubstatus';
+
+            if ($freshTicket === false) {
+                return $this->tpl->display('errors.error500', responseCode: 500);
+            }
+
+            return $this->renderTicketModal($freshTicket, 'githubstatus');
         }
 
         // Save Ticket
@@ -273,6 +224,81 @@ class ShowTicket extends Controller
         }
 
         $response = Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.''.$tab);
+        $response->headers->set('HX-Trigger', 'ticketUpdate');
+
+        return $response;
+    }
+
+    /**
+     * @throws BindingResolutionException
+     */
+    private function renderTicketModal(object $ticket, string $activeTab = ''): Response
+    {
+        $id = (int) $ticket->id;
+        $this->tpl->assign('ticket', $ticket);
+        $this->tpl->assign('ticketParents', $this->ticketService->getAllPossibleParents($ticket));
+        $statusLabels = $this->ticketService->getStatusLabels();
+        $this->tpl->assign('statusLabels', $statusLabels);
+        $this->tpl->assign('dependencyTicketIds', $this->ticketdependencyService->getDependencyTicketIds($ticket->id));
+        $this->tpl->assign('dependencyTickets', $this->ticketdependencyService->getDependencies($ticket->id));
+        $this->tpl->assign('isBlocked', $this->ticketdependencyService->isTicketBlocked($ticket->id, $statusLabels));
+        $this->tpl->assign('autoRescheduleDependenciesEnabled', $this->ticketdependencyService->getAutoRescheduleEnabled($ticket->id));
+        $this->tpl->assign('ticketTypes', $this->ticketService->getTicketTypes());
+        $this->tpl->assign('ticketTypeIcons', $this->ticketService->getTypeIcons());
+        $this->tpl->assign('efforts', $this->ticketService->getEffortLabels());
+        $this->tpl->assign('priorities', $this->ticketService->getPriorityLabels());
+
+        $allProjectMilestones = $this->ticketService->getAllMilestones([
+            'sprint' => '',
+            'type' => 'milestone',
+            'currentProject' => session('currentProject'),
+        ]);
+        $this->tpl->assign('milestones', $allProjectMilestones);
+        $this->tpl->assign('sprints', $this->sprintService->getAllSprints(session('currentProject')));
+
+        $this->tpl->assign('kind', $this->timesheetService->getLoggableHourTypes());
+        $this->tpl->assign('ticketHours', $this->timesheetService->getLoggedHoursForTicketByDate($id));
+        $this->tpl->assign('userHours', $this->timesheetService->getUsersTicketHours($id, session('userdata.id')));
+
+        $this->tpl->assign('timesheetsAllHours', $this->timesheetService->getSumLoggedHoursForTicket($id));
+        $this->tpl->assign('remainingHours', $this->timesheetService->getRemainingHours($ticket));
+
+        $this->tpl->assign('userInfo', $this->userService->getUser(session('userdata.id')));
+        $this->tpl->assign('users', $this->projectService->getUsersAssignedToProject($ticket->projectId));
+
+        $projectData = $this->projectService->getProject($ticket->projectId);
+        $this->tpl->assign('projectData', $projectData);
+
+        $comments = $this->commentService->getComments('ticket', $id);
+
+        $this->tpl->assign('numComments', count($comments));
+        $this->tpl->assign('comments', $comments);
+
+        $files = $this->fileService->getFilesByModule('ticket', $id);
+        $this->tpl->assign('numFiles', count($files));
+        $this->tpl->assign('files', $files);
+
+        $this->tpl->assign('onTheClock', $this->timesheetService->isClocked(session('userdata.id')));
+        $this->tpl->assign('githubStatus', $this->githubElevation->getTicketGithubStatus($id));
+        $this->tpl->assign('canElevateGitHub', AuthService::userIsAtLeast(Roles::$manager, true));
+        $this->tpl->assign('defaultGithubTitle', $this->githubElevation->getDefaultGithubTitle($ticket));
+        $this->tpl->assign('defaultGithubSummary', $this->githubElevation->getDefaultGithubSummary($ticket));
+        $this->tpl->assign('activeTab', $activeTab);
+
+        $this->tpl->assign('timesheetValues', [
+            'kind' => '',
+            'date' => Carbon::now(session('usersettings.timezone'))->setTimezone('UTC'),
+            'hours' => '',
+            'description' => '',
+        ]);
+
+        // TODO: Refactor thumbnail generation in file manager
+        $this->tpl->assign('imgExtensions', ['jpg', 'jpeg', 'png', 'gif', 'psd', 'bmp', 'tif', 'thm', 'yuv']);
+
+        $allAssignedprojects = $this->projectService->getProjectsUserHasAccessTo(session('userdata.id'), 'open');
+        $this->tpl->assign('allAssignedprojects', $allAssignedprojects);
+
+        $response = $this->tpl->displayPartial('tickets.showTicketModal');
         $response->headers->set('HX-Trigger', 'ticketUpdate');
 
         return $response;

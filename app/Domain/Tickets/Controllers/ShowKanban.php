@@ -61,7 +61,7 @@ class ShowKanban extends Controller
         $this->tpl->assign('allKanbanColumns', $allKanbanColumns);
         $this->tpl->assign('statusBreakdown', $statusBreakdown);
 
-        return $this->tpl->display('tickets.showKanban');
+        return $this->tpl->display('tickets.showKanbanV2');
     }
 
     /**
