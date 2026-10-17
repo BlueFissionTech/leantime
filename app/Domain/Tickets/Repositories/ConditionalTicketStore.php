@@ -59,12 +59,17 @@ abstract class ConditionalTicketStore
                     'changeType' => $field, 'changeValue' => $value, 'dateModified' => $now,
                 ]);
             }
+            $text = array_intersect_key($ticket, array_flip(['headline', 'description', 'acceptanceCriteria']));
             $this->connection->table('zp_ticket_patch_outbox')->insert([
                 'operationKey' => $intent->operationKey(),
-                'eventType' => 'ticket.text_patched.v1',
+                'eventType' => 'ticket.text_patched.v2',
                 'payload' => json_encode([
+                    'contract' => 'ticket.text_patched.v2',
+                    'operationKey' => $intent->operationKey(), 'operationId' => $intent->operationId,
                     'actorId' => $intent->actorId, 'projectId' => $intent->projectId,
                     'ticketId' => $intent->ticketId, 'fields' => array_keys($changes), 'version' => $nextVersion,
+                    'previousVersion' => $version, 'occurredAt' => $now,
+                    'before' => $text, 'after' => array_replace($text, $changes),
                 ], JSON_THROW_ON_ERROR),
             ]);
 

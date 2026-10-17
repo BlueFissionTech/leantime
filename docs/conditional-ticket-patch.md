@@ -230,18 +230,61 @@ it neither accepts an operation/destination idempotency key nor returns a durabl
 enqueue receipt. Messenger sends occur before the remaining mention/in-app work.
 A crash after any send cannot safely restart this composite method.
 
-The current `ticket.text_patched.v1` payload has field names and revision only,
-not immutable changed content or the full notification entity. Reading the current
-ticket at delivery could notify a later edit under the earlier operation key.
-Therefore this slice deliberately supplies **no consumer and no outboxReady
-activation**. The smallest coherent follow-up is a versioned immutable notification
-intent captured in the mutation transaction, a side-effect-free recipient/content
-planner retaining the above policy, and per-operation/channel/destination durable
-enqueue receipts committed with local queue entries on the same connection.
-External delivery additionally needs provider idempotency or explicit uncertain
-outcome/readback handling; local enqueue-once is not exactly-once delivery.
-Crash-after-enqueue/send, duplicate workers, changed preferences/access, mentions
-and replay tests must pass before the existing notification facade can be adapted.
+The transaction now emits `ticket.text_patched.v2`, capturing operation key/ID,
+actor/project/ticket identity, previous and resulting issued revisions, UTC event
+time, changed field names, and complete allowlisted `before`/`after` text images.
+Stored null and explicit empty values remain distinct. This immutable event is
+inserted with ticket/history/receipt effects: rollback removes it, and patch replay
+does not replace it with current ticket content. No-op/conflict produces no event.
+It deliberately excludes unrelated ticket fields, user addresses and credentials.
+It is not the complete legacy Notification entity. Older v1 events cannot be
+upgraded by reading current ticket content; the new fixture rejects them.
+
+`ConditionalNotificationPlan::prepare(array $intent, ?array $policy = null)` is a
+pure boundary, **not an installed production policy adapter**. Missing policy is
+blocked. A trusted adapter must supply `contract=ticket-notification-policy-v1`,
+`intentDigest` (SHA-256 of the immutable event JSON), nonempty `revision`, explicit
+boolean-true coverage for all `COVERAGE` stages, and `deliveries`. Stages include
+membership, relevance, event preferences, author exclusion, mention bypass, plugin
+filters, messenger and in-app behavior. These assertions are obligations for the
+adapter, not proof that those real policies have been qualified. Never populate
+them mechanically or accept them from an untrusted API caller.
+
+Each final delivery contains exactly `channel` (`email`, `messenger`, `in_app`),
+stable opaque `destination`, `subject` and `body`. The adapter owns policy decisions,
+recipient resolution and rendering; this boundary does not invent replacements
+for the legacy policies or call their side-effectful facade. It retains the final
+policy output, canonicalizes destination keys, deduplicates identical entries and
+rejects conflicting content for the same operation/channel/destination. No actual
+legacy policy/render adapter is provided; the production gate remains off.
+
+`Tests\\Fixtures\\ConditionalNotificationQueue` is an executable SQLite-only,
+default-disabled queue contract, not a registered worker. After observing a
+matching committed applied patch receipt it persists one plan, immutable local
+queue entries and durable per-operation/channel/destination receipts atomically.
+Exact replay recovers that plan without recomputing policy. Changed event content
+cannot reuse it. Its `test_notification_*` tables are disposable fixture schema;
+no production notification tables/migration are added.
+
+The fixture transition contract is `queued -> dispatching -> sent|uncertain`.
+`claim(key, currentPolicyCheck)` checks current eligibility and persists a unique
+attempt before returning payload; denial cancels it. The check must cover current
+access and policy/preferences, not merely rely on the original plan. A crash after
+claim leaves dispatching, which cannot be claimed again. `settle(key, attempt,
+providerReceipt|null)` maps unknown outcome to uncertain; a later independently
+verified provider readback may resolve the same attempt to sent. There is **no
+requeue/retry transition**, and conflicting receipt/attempt tokens reject. Fixture
+receipt strings are synthetic; no transport or trustworthy provider-proof verifier
+is supplied. A local enqueue receipt is not an external delivery receipt.
+
+Remaining implementation: a qualified read-only adapter for the actual project,
+member, preferences, mentions, plugin and rendering semantics; a production
+same-connection queue/receipt adapter; and transport-specific idempotency/readback
+and crash recovery. Full legacy Notification entity/URLs/localization, plugin
+execution ordering, mention processing, in-app events and messenger delivery are
+**excluded from this fixture's proof**, not dropped from acceptance criteria.
+Do not enable `outboxReady`. Review text-content retention/access policy before
+adopting the new immutable outbox payload, which now contains ticket text.
 
 ## Remaining production adoption gates
 
@@ -296,6 +339,7 @@ php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-n
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketEndpointTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketRpcTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalNotificationQueueTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/MysqlConditionalTicketSchemaTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Integration/ConditionalTicketMysqlTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/ConditionalTicketPatch.php tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
