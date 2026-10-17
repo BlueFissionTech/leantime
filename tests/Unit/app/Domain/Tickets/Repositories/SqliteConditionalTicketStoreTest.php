@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
 use Tests\Fixtures\ConditionalTicketDatabase;
 
 require_once dirname(__DIR__, 6).'/app/Domain/Tickets/Support/ConditionalTicketPatch.php';
+require_once dirname(__DIR__, 6).'/app/Domain/Tickets/Repositories/ConditionalTicketStore.php';
 require_once dirname(__DIR__, 6).'/app/Domain/Tickets/Repositories/SqliteConditionalTicketStore.php';
 require_once dirname(__DIR__, 6).'/tests/Fixtures/ConditionalTicketDatabase.php';
 

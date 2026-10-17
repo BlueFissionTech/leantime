@@ -1,10 +1,12 @@
-# Conditional ticket patch — request and SQLite storage contract, draft v1
+# Conditional ticket patch — guarded storage and callable contract, draft v1
 
-Partial implementation of #159. This change supplies an immutable request value
-object and an executable SQLite transaction/receipt conformance adapter.
-**There is no callable HTTP/JSON-RPC patch endpoint or production schema/adoption
-in this change. It must not enable integration writes.** Existing write APIs are
-unchanged. The disposable storage proof is described below.
+Partial implementation of #159. This supplies an immutable request, shared
+transaction body, SQLite conformance adapter, current-project policy, review-only
+MySQL schema/adapter, and default-off authenticated service methods.
+**MySQL execution and HTTP routing are not qualified. No production schema is
+applied and integration writes must remain disabled.** Existing write APIs are
+unchanged. Notification delivery is not implemented; writes have a separate
+fail-closed outbox qualification gate.
 
 ## Implemented contract
 
@@ -119,6 +121,73 @@ serializes access changes with writes; a future engine adapter must supply its
 own equivalent authorization/concurrency guarantees. Do not reuse the policy
 with an arbitrary read-committed transaction and assume that guarantee.
 
+## MySQL proposal and default-off callable service
+
+The review branch now includes staging baseline `b815fe95` (including dependency
+integration `cc90a646`). No protected branch was changed. Current dependency
+writes in `Ticketdependencies` use `zp_entity_relationship`; ticket status,
+sorting, parent completion and schedule updates use `zp_tickets`. The proposed
+triggers cover those physical tables rather than only this new entrypoint.
+Legacy multi-step workflows themselves are not made atomic by this change.
+
+`MysqlConditionalTicketSchema::statements()` returns review-only DDL; it never
+executes it and is not registered with the application migrator. It proposes:
+
+- InnoDB guard, append-only BIGINT AUTO_INCREMENT revision events, operation-key
+  unique receipts and transactional outbox; initial revisions for existing tickets.
+- BEFORE triggers for every insert/update/delete on tickets, entity relationships,
+  users, projects and project membership, acquiring the same guard row lock.
+- AFTER triggers appending revisions for old/new ticket identities and all old/new
+  Ticket relationship endpoints, including dependencies and collaborators.
+- Widening `zp_tickethistory.changeValue` from the install schema's VARCHAR(150)
+  to MEDIUMTEXT so accepted description/criteria values are not truncated.
+
+Schema changes require a reviewed maintenance/quiescence plan, backup/restore and
+retention policy, all-writer inventory, runtime privileges excluding DDL/TRUNCATE,
+and separate human approval. DDL is not transactional as a batch. No drop/reset
+or automatic rollback migration is supplied. Preserve revision events and the
+counter; restore/replication/epoch behavior needs review before activation.
+
+`MysqlConditionalTicketStore` requires MySQL 8.x (not MariaDB), all expected
+InnoDB tables, full-text history, exact reviewed trigger definitions and no
+cascaded foreign-key writer paths. Its first transactional data read locks the
+shared guard. Expected revision and actual ACL are then checked while competing
+ticket/relation/ACL writers are serialized; the shared text/history/receipt/outbox
+body executes before releasing that lock. Read-only receipt/version methods use
+the lock without changing data. Deadlocks/timeouts/commit ambiguity fail unknown,
+with one transaction attempt and no send retry. Unknown extra triggers reject.
+
+This is deliberately a conservative global lock, not a performance claim. Legacy
+writers can acquire other row locks first and deadlock; failure must remain safe.
+Real-engine tests must establish that the actual deployed engine/schema/plugins
+obey the contract. MySQL trigger restrictions preclude reusing the SQLite update's
+revision-table subquery, so the MySQL path uses the transaction-held guard instead.
+See [MySQL trigger restrictions](https://dev.mysql.com/doc/refman/8.0/en/faqs-triggers.html)
+and [InnoDB auto-increment behavior](https://dev.mysql.com/doc/refman/8.0/en/innodb-auto-increment-handling.html).
+
+Source-callable `Leantime\Domain\Tickets\Services\ConditionalTickets` methods:
+
+- `readVersion(array $request): array`: exactly positive integer projectId/ticketId.
+- `readReceipt(array $request): array`: full original patch intent for authorized
+  uncertain-send readback, with actor derived from authentication.
+- `patch(array $request): array`: full text-only intent; original correlated result
+  on exact replay. Missing receipts remain unknown, never retry authorization.
+
+The methods use existing `@api` service discovery conventions; proposed RPC names
+are `leantime.rpc.tickets.conditionaltickets.readVersion`, `.readReceipt`, `.patch`
+with `params.request` containing the envelope. Full HTTP/router qualification
+remains outstanding. The service accepts only the selected `ApiGuard`, not a web
+session, and uses the existing connection plus `CurrentProjectTicketAccess`.
+Caller-supplied actor fields are rejected. No schema is installed by these methods.
+
+Three independent gates remain OFF: server config
+`tickets.conditional_patch.enabled` must be literal boolean true (default false),
+the schema guard `enabled` must be 1 (default 0), and mutations additionally require
+`outboxReady`=1 (default 0). **Do not set these for production.** The last flag is
+reserved for a reviewed, tested consumer preserving notification/event semantics;
+no such consumer is supplied yet. Direct legacy notification methods are not called
+before commit or on replay. Durable outbox rows alone are not delivered notifications.
+
 ## Remaining production adoption gates
 
 1. Review migration/version issuance and receipt retention policy before applying
@@ -145,21 +214,20 @@ with an arbitrary read-committed transaction and assume that guarantee.
    responses, transaction rollback and notification behavior on an approved
    synthetic storage/API setup before independent review and staging adoption.
 
-Exact source gap: the PR base `f6a9434` has repository `updateTicket`, `patchTicket`,
+Exact source gap: the original PR base `f6a9434` has repository `updateTicket`, `patchTicket`,
 `updateTicketStatus` and bulk sorting writes predicated by ID, history recorded
 separately, collaborator writes in `zp_entity_relationship`, and service events
 outside a transaction. `Projects::isUserAssignedToProject` delegates to a policy
 that can resolve users through the application container and includes global-role,
 client and project membership rules; it is not this fixture's simple access table.
-The inspected integration branch `cc90a646` additionally has dependency scheduling,
-auto-reschedule relation flags and parent completion, absent from this PR's base.
+The now-incorporated integration branch `cc90a646` additionally has dependency scheduling,
+auto-reschedule relation flags and parent completion.
 Its dependency repository also uses `zp_entity_relationship` Ticket endpoints.
 
-Smallest next owner fixes: adopt the reviewed revision/receipt/outbox schema and
-writer coverage for the intended production engine, qualify the current role/project
-policy under that engine's concurrency and application filters, reconcile the dependency-bearing integration
-branch, then expose the text-only API with real-engine rollback/permission/concurrent
-proof and a reviewed outbox consumer. Do not add a conditional wrapper around
+Smallest next owner fixes: qualify the proposed schema/adapter and current policy
+on an approved MySQL fixture, qualify HTTP authentication/discovery, and implement
+the reviewed idempotent outbox consumer and its delivery receipts. Only then seek
+independent review and explicit schema/deployment/activation approvals. Do not add a conditional wrapper around
 legacy multi-step writes, claim the fixture covers uninspected extensions, or
 expose workflow/status patches before their larger transactional scope is proved.
 
@@ -171,14 +239,29 @@ With existing dependencies, from the checkout root:
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketEndpointTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/MysqlConditionalTicketSchemaTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Integration/ConditionalTicketMysqlTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/ConditionalTicketPatch.php tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Repositories/SqliteConditionalTicketStore.php tests/Fixtures/ConditionalTicketDatabase.php tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/CurrentProjectTicketAccess.php tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 ```
 
-Tests use existing PDO SQLite and Laravel dependencies without application boot
-or environment credentials. They now prove the bounded SQLite storage behavior,
-not the production API/authorization/deployed engine. No application migrations,
-runtime registrations, dependencies or services are added. Keep #159 open and the
+The focused tests use existing PDO SQLite and Laravel dependencies without application
+boot or environment credentials. They prove bounded SQLite behavior, authenticated
+entrypoint logic and generated schema coverage, not MySQL SQL execution, production
+API authentication/discovery or deployed engine behavior. The opt-in MySQL fixture
+skips unless `LEANTIME_CONDITIONAL_MYSQL_ALLOW_SCHEMA=1` is explicitly authorized.
+It requires an existing empty database named `leantime_conditional_test_<suffix>`,
+`LEANTIME_CONDITIONAL_MYSQL_DATABASE`, a matching `LEANTIME_CONDITIONAL_MYSQL_DSN`,
+and securely supplied `LEANTIME_CONDITIONAL_MYSQL_USER` / `_PASSWORD` values. Never
+point it at staging/production or a database with existing tables. It creates and
+removes only its exact test tables, tests default-off/schema gates, long-text history,
+replay/readback, ABA/relation invalidation, overlapping connections, rollback and
+revocation. Its test-only outbox flag is not consumer qualification. It does not
+install dependencies, create a database/account, or start services.
+
+No application migration was executed, services started or dependencies changed.
+Keep #159 open and the
 review draft until remaining adoption gates are satisfied. Deployment and live
 reconciliation remain unapproved.
