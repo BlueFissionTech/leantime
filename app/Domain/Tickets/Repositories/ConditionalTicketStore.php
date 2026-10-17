@@ -95,6 +95,23 @@ abstract class ConditionalTicketStore
         });
     }
 
+    /** Content and issued revision from one authorized, consistent transaction. */
+    public function readSnapshot(int $actorId, int $projectId, int $ticketId): array
+    {
+        return $this->transaction(false, function () use ($actorId, $projectId, $ticketId): array {
+            $ticket = $this->authorizedTicket($actorId, $projectId, $ticketId, 'read');
+            if ($ticket === null) {
+                return ['state' => 'denied', 'reason' => 'destination_or_access'];
+            }
+
+            return [
+                'state' => 'current', 'projectId' => $projectId, 'ticketId' => $ticketId,
+                'version' => $this->version($ticketId),
+                'text' => array_intersect_key($ticket, array_flip(['headline', 'description', 'acceptanceCriteria'])),
+            ];
+        });
+    }
+
     abstract protected function transaction(bool $write, Closure $work): array;
 
     abstract protected function update(ConditionalTicketPatch $intent, array $changes): int;

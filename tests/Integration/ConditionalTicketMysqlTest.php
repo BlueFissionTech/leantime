@@ -73,6 +73,9 @@ final class ConditionalTicketMysqlTest extends TestCase
             $db->table('zp_tickets')->insert(['id' => 12, 'projectId' => 7, 'headline' => 'Keep', 'description' => 'Old', 'acceptanceCriteria' => '']);
             $version = $store->readVersion(8, 7, 12);
             self::assertSame('current', $version['state']);
+            $snapshot = $store->readSnapshot(8, 7, 12);
+            self::assertSame($version['version'], $snapshot['version']);
+            self::assertSame(['headline' => 'Keep', 'description' => 'Old', 'acceptanceCriteria' => ''], $snapshot['text']);
             $intent = fn (string $operation, string $token): ConditionalTicketPatch => ConditionalTicketPatch::fromRequest(8, [
                 'projectId' => 7, 'ticketId' => 12, 'operationId' => $operation, 'expectedVersion' => $token,
                 'patch' => ['description' => str_repeat('text', 200)],
@@ -96,6 +99,19 @@ final class ConditionalTicketMysqlTest extends TestCase
             $db->table('zp_entity_relationship')->insert(['id' => 1, 'entityA' => 12, 'entityAType' => 'Ticket', 'entityB' => 13, 'entityBType' => 'Ticket', 'relationship' => 'dependency']);
             self::assertNotSame($before, $store->readVersion(8, 7, 12)['version']);
             $other->statement('SET SESSION innodb_lock_wait_timeout = 1');
+            $legacyBlocked = false;
+            $snapshotStore = new MysqlConditionalTicketStore($db, function (...$args) use ($other, &$legacyBlocked, $policy): bool {
+                try {
+                    $other->table('zp_tickets')->where('id', 12)->update(['headline' => 'Overlapping writer']);
+                } catch (\Illuminate\Database\QueryException) {
+                    $legacyBlocked = true;
+                }
+
+                return $policy(...$args);
+            });
+            $beforeSnapshot = $store->readSnapshot(8, 7, 12);
+            self::assertSame($beforeSnapshot, $snapshotStore->readSnapshot(8, 7, 12));
+            self::assertTrue($legacyBlocked);
             $overlap = new MysqlConditionalTicketStore($db, function (...$args) use ($otherStore, $policy): bool {
                 self::assertSame('failure', $otherStore->readVersion(8, 7, 12)['state']);
 

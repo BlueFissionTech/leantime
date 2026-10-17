@@ -87,6 +87,42 @@ final class SqliteConditionalTicketStoreTest extends TestCase
         ]);
     }
 
+    public function test_snapshot_pairs_only_text_with_revision_and_rechecks_permission(): void
+    {
+        $snapshot = $this->store()->readSnapshot(8, 7, 12);
+        self::assertSame(['state' => 'current', 'projectId' => 7, 'ticketId' => 12,
+            'version' => $this->store()->readVersion(8, 7, 12)['version'],
+            'text' => ['headline' => 'Keep', 'description' => 'Old', 'acceptanceCriteria' => '']], $snapshot);
+        self::assertSame([0, 0, 0], $this->counts());
+        self::assertSame(['state' => 'denied', 'reason' => 'destination_or_access'], $this->store()->readSnapshot(8, 99, 12));
+        $this->db->table('test_project_access')->delete();
+        self::assertSame(['state' => 'denied', 'reason' => 'destination_or_access'], $this->store()->readSnapshot(8, 7, 12));
+    }
+
+    public function test_snapshot_cannot_pair_old_content_with_concurrent_legacy_writer_version(): void
+    {
+        $before = $this->store()->readSnapshot(8, 7, 12);
+        $other = $this->connect();
+        $blocked = false;
+        $policy = $this->policy();
+        $store = $this->store(policy: function (...$args) use ($other, &$blocked, $policy): bool {
+            try {
+                $other->table('zp_tickets')->where('id', 12)->update(['description' => 'Concurrent']);
+            } catch (\Illuminate\Database\QueryException) {
+                $blocked = true;
+            }
+
+            return $policy(...$args);
+        });
+        self::assertSame($before, $store->readSnapshot(8, 7, 12));
+        self::assertTrue($blocked);
+        $other->table('zp_tickets')->where('id', 12)->update(['description' => 'Concurrent']);
+        $after = $this->store()->readSnapshot(8, 7, 12);
+        self::assertSame('Concurrent', $after['text']['description']);
+        self::assertNotSame($before['version'], $after['version']);
+        self::assertSame('stale_version', $this->store()->execute($this->intent(['headline' => 'Edit'], 'snapshot-stale', $before['version']))['reason']);
+    }
+
     public function test_patch_commits_history_receipt_and_outbox_without_changing_omissions(): void
     {
         $before = (array) $this->db->table('zp_tickets')->find(12);

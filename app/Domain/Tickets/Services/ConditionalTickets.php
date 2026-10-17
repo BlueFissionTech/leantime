@@ -21,6 +21,12 @@ final class ConditionalTickets
     }
 
     /** @api */
+    public function readSnapshot(array $request): array
+    {
+        return $this->endpoint()->call('readSnapshot', $request);
+    }
+
+    /** @api */
     public function readReceipt(array $request): array
     {
         return $this->endpoint()->call('readReceipt', $request);

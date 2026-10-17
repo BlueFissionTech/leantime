@@ -168,17 +168,48 @@ and [InnoDB auto-increment behavior](https://dev.mysql.com/doc/refman/8.0/en/inn
 Source-callable `Leantime\Domain\Tickets\Services\ConditionalTickets` methods:
 
 - `readVersion(array $request): array`: exactly positive integer projectId/ticketId.
+- `readSnapshot(array $request): array`: same exact identity request; returns only
+  headline, description and acceptanceCriteria with identity and issued revision
+  from one current-authorized transaction. Preserve stored null versus empty values.
 - `readReceipt(array $request): array`: full original patch intent for authorized
   uncertain-send readback, with actor derived from authentication.
 - `patch(array $request): array`: full text-only intent; original correlated result
   on exact replay. Missing receipts remain unknown, never retry authorization.
 
-The methods use existing `@api` service discovery conventions; proposed RPC names
-are `leantime.rpc.tickets.conditionaltickets.readVersion`, `.readReceipt`, `.patch`
-with `params.request` containing the envelope. Full HTTP/router qualification
-remains outstanding. The service accepts only the selected `ApiGuard`, not a web
+The portable RPC prefix is `leantime.rpc.tickets.conditional_tickets`, followed by
+`.readVersion`, `.readSnapshot`, `.readReceipt` or `.patch`. The earlier proposed
+`conditionaltickets` segment does not retain the PSR-4 class capitalization on
+case-sensitive filesystems. The actual JSON-RPC controller's POST body parsing,
+discovery, named argument preparation, response correlation and service dispatch
+are exercised with the real API guard and a synthetic API-key provider. These
+fixtures bypass controller construction events and the HTTP kernel, and do not
+qualify deployed routing, real key storage, sessions, proxy/base-path configuration
+or successful MySQL execution. The service accepts only the selected `ApiGuard`, not a web
 session, and uses the existing connection plus `CurrentProjectTicketAccess`.
 Caller-supplied actor fields are rejected. No schema is installed by these methods.
+
+Example JSON-RPC POST body (API authentication uses `x-api-key`; never publish keys):
+
+```json
+{"jsonrpc":"2.0","id":"review-42","method":"leantime.rpc.tickets.conditional_tickets.readSnapshot","params":{"request":{"projectId":7,"ticketId":12}}}
+```
+
+Example qualified-store result envelope (synthetic data, not a deployed receipt):
+
+```json
+{"jsonrpc":"2.0","id":"review-42","result":{"state":"current","projectId":7,"ticketId":12,"version":"ticket-revision-v1:4","text":{"headline":"Keep","description":"Old","acceptanceCriteria":""}}}
+```
+
+For `patch` and `readReceipt`, `params.request` instead contains the same complete
+original intent: `projectId`, `ticketId`, `operationId`, `expectedVersion`, and
+`patch`. Obtain reviewed content and `expectedVersion` from **one readSnapshot**;
+do not join a separate getTicket result with readVersion or substitute a hash.
+An overlapping legacy writer cannot pair old text with a newer token in the
+SQLite fixture. A later edit changes the issued token and rejects the stale patch.
+MySQL uses the existing shared writer guard for this read; engine proof is pending.
+HTTP 200 alone is not success: inspect the correlated JSON-RPC result/error and
+state. Disabled, missing/invalid API authentication, session-only authentication
+and unsupported-storage outcomes are explicitly covered for all four methods.
 
 Three independent gates remain OFF: server config
 `tickets.conditional_patch.enabled` must be literal boolean true (default false),
@@ -187,6 +218,30 @@ the schema guard `enabled` must be 1 (default 0), and mutations additionally req
 reserved for a reviewed, tested consumer preserving notification/event semantics;
 no such consumer is supplied yet. Direct legacy notification methods are not called
 before commit or on replay. Durable outbox rows alone are not delivered notifications.
+
+### Notification consumer implementation boundary
+
+Source inspection rules out safely wrapping `Projects::notifyProjectUsers` in a
+retrying outbox loop. That method applies plugin filters, author exclusion,
+per-project relevance and event-type preferences, mention bypass, email queuing,
+messenger sends, mention processing and in-app events. `Queue::queueMessageToUsers`
+derives its message hash from the current timestamp and catches insertion errors;
+it neither accepts an operation/destination idempotency key nor returns a durable
+enqueue receipt. Messenger sends occur before the remaining mention/in-app work.
+A crash after any send cannot safely restart this composite method.
+
+The current `ticket.text_patched.v1` payload has field names and revision only,
+not immutable changed content or the full notification entity. Reading the current
+ticket at delivery could notify a later edit under the earlier operation key.
+Therefore this slice deliberately supplies **no consumer and no outboxReady
+activation**. The smallest coherent follow-up is a versioned immutable notification
+intent captured in the mutation transaction, a side-effect-free recipient/content
+planner retaining the above policy, and per-operation/channel/destination durable
+enqueue receipts committed with local queue entries on the same connection.
+External delivery additionally needs provider idempotency or explicit uncertain
+outcome/readback handling; local enqueue-once is not exactly-once delivery.
+Crash-after-enqueue/send, duplicate workers, changed preferences/access, mentions
+and replay tests must pass before the existing notification facade can be adapted.
 
 ## Remaining production adoption gates
 
@@ -240,6 +295,7 @@ php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-n
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Repositories/SqliteConditionalTicketStoreTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/CurrentProjectTicketAccessTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketEndpointTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/ConditionalTicketRpcTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/Support/MysqlConditionalTicketSchemaTest.php
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Integration/ConditionalTicketMysqlTest.php
 php vendor/bin/pint --test --config .pint/pint.json app/Domain/Tickets/Support/ConditionalTicketPatch.php tests/Unit/app/Domain/Tickets/Support/ConditionalTicketPatchTest.php

@@ -29,7 +29,7 @@ final class ConditionalTicketEndpoint
                 return ['state' => 'denied', 'reason' => 'unauthenticated'];
             }
             $intent = null;
-            if ($action === 'readVersion') {
+            if (in_array($action, ['readVersion', 'readSnapshot'], true)) {
                 $keys = array_keys($request);
                 sort($keys);
                 if ($keys !== ['projectId', 'ticketId'] || ! is_int($request['projectId'])
@@ -48,6 +48,7 @@ final class ConditionalTicketEndpoint
 
             return match ($action) {
                 'readVersion' => $store->readVersion((int) $actor, $request['projectId'], $request['ticketId']),
+                'readSnapshot' => $store->readSnapshot((int) $actor, $request['projectId'], $request['ticketId']),
                 'readReceipt' => $store->readReceipt($intent),
                 'patch' => $store->execute($intent),
             };

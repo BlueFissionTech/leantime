@@ -25,7 +25,7 @@ final class ConditionalTicketEndpointTest extends TestCase
             self::fail('Disabled capability touched a dependency.');
         };
         $endpoint = new ConditionalTicketEndpoint($never, $never);
-        foreach (['readVersion', 'readReceipt', 'patch'] as $action) {
+        foreach (['readVersion', 'readSnapshot', 'readReceipt', 'patch'] as $action) {
             self::assertSame('capability_disabled', $endpoint->call($action, [])['reason']);
         }
     }
@@ -55,6 +55,7 @@ final class ConditionalTicketEndpointTest extends TestCase
     public static function invalidRequests(): array
     {
         return [
+            ['readSnapshot', ['projectId' => 7, 'ticketId' => 12, 'actorId' => 9]],
             ['readVersion', ['projectId' => 7, 'ticketId' => 12, 'actorId' => 9]],
             ['readVersion', ['projectId' => '7', 'ticketId' => 12]],
             ['readVersion', ['projectId' => 7, 'ticketId' => 0]],
@@ -78,6 +79,9 @@ final class ConditionalTicketEndpointTest extends TestCase
             $endpoint = new ConditionalTicketEndpoint(fn () => $store, fn () => $guard, true);
             $version = $endpoint->call('readVersion', ['projectId' => 7, 'ticketId' => 12]);
             self::assertSame('current', $version['state']);
+            $snapshot = $endpoint->call('readSnapshot', ['projectId' => 7, 'ticketId' => 12]);
+            self::assertSame($version['version'], $snapshot['version']);
+            self::assertSame(['headline' => 'Keep', 'description' => 'Old', 'acceptanceCriteria' => ''], $snapshot['text']);
             $request = ['projectId' => 7, 'ticketId' => 12, 'operationId' => 'endpoint-1',
                 'expectedVersion' => $version['version'], 'patch' => ['description' => '']];
             $applied = $endpoint->call('patch', $request);
