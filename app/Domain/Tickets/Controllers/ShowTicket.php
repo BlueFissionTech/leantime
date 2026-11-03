@@ -86,7 +86,7 @@ class ShowTicket extends Controller
 
         // Delete file
         if (isset($params['delFile']) === true) {
-            if ($result = $this->fileService->deleteFile($params['delFile'])) {
+            if ($this->fileService->deleteFile($params['delFile'])) {
                 $this->tpl->setNotification($this->language->__('notifications.file_deleted'), 'success');
 
                 $response = Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.'#files');
@@ -95,7 +95,7 @@ class ShowTicket extends Controller
                 return $response;
             }
 
-            $this->tpl->setNotification($result['msg'], 'error');
+            $this->tpl->setNotification($this->language->__('notifications.file_deleted_error'), 'error');
         }
 
         // Delete comment

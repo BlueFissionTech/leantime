@@ -15,11 +15,17 @@ With existing development dependencies, run:
 
 ```sh
 php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/AttachmentModalRefreshSourceTest.php
+php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php --do-not-cache-result tests/Unit/app/Domain/Tickets/AttachmentDeleteFailureTest.php
 ```
 
 Source checks verify modal-handler wiring and response intent, not successful
 browser redirect/header handling. In particular, an HX-Trigger on a redirect
 does not by itself establish that the browser receives a refresh event.
+
+The controller test covers a separate failure path: if the file service returns
+`false`, the editor sees the localized deletion error and the controller renders
+the ticket modal again. It uses test doubles; it does not delete a file or prove
+browser behavior, storage isolation, or deployed permissions.
 
 - [ ] On an approved disposable staging task, create a uniquely named QA file.
 - [ ] Delete only that QA-created file, then confirm list refresh, task identity,
