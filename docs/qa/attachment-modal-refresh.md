@@ -1,8 +1,10 @@
 # Attachment modal refresh review
 
-Related: #6; extracted from #12. This branch changes the attachment delete link
-and successful-delete response only, with source regression coverage. It does
-not change storage, file authorization, or the existing delete transport.
+Related: #6; extracted from #12. In the ticket modal, both existing attachments
+and newly uploaded attachments use the current ticket's delete route. Other
+file-manager contexts retain their existing route. The ticket controller checks
+the editor role and the file's module and ticket ID before calling deletion.
+Storage and the existing delete transport are unchanged.
 
 ## User story and acceptance
 
@@ -24,8 +26,10 @@ does not by itself establish that the browser receives a refresh event.
 
 The controller test covers a separate failure path: if the file service returns
 `false`, the editor sees the localized deletion error and the controller renders
-the ticket modal again. It uses test doubles; it does not delete a file or prove
-browser behavior, storage isolation, or deployed permissions.
+the ticket modal again. Separate synthetic cases check that a read-only actor,
+a different ticket, and another module with the same numeric ID never reach
+deletion. These tests do not delete a file or prove browser behavior, storage
+isolation, or deployed permissions.
 
 - [ ] On an approved disposable staging task, create a uniquely named QA file.
 - [ ] Delete only that QA-created file, then confirm list refresh, task identity,

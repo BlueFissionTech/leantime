@@ -24,7 +24,7 @@ final class AttachmentModalRefreshSourceTest extends TestCase
     public function testSuccessfulDeleteKeepsTicketFilesContextAndEmitsRefresh(): void
     {
         $source = file_get_contents(dirname(__DIR__, 5) . '/app/Domain/Tickets/Controllers/ShowTicket.php');
-        $start = strpos($source, "deleteFile(\$params['delFile'])");
+        $start = strpos($source, 'deleteFile($fileId)');
         self::assertNotFalse($start);
         $end = strpos($source, 'return $response;', $start);
         self::assertNotFalse($end);
@@ -32,5 +32,17 @@ final class AttachmentModalRefreshSourceTest extends TestCase
 
         self::assertStringContainsString("Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.\$id.'#files')", $success);
         self::assertStringContainsString("\$response->headers->set('HX-Trigger', 'ticketUpdate')", $success);
+    }
+
+    public function testActiveModalUsesTicketRouteForExistingAndUploadedFiles(): void
+    {
+        $root = dirname(__DIR__, 5);
+        $modal = file_get_contents($root.'/app/Domain/Tickets/Templates/showTicketModal.blade.php');
+        $files = file_get_contents($root.'/app/Domain/Files/Templates/submodules/showAll.sub.php');
+        self::assertStringContainsString("displaySubmodule('files-showAll')", $modal);
+        self::assertStringContainsString("'/tickets/showTicket/'.\$attachmentTicketId : '/files/showAll'", $files);
+        self::assertStringContainsString("htmlentities(\$deleteUrl).(int) \$file['id']", $files);
+        self::assertStringContainsString('json_encode($deleteUrl', $files);
+        self::assertStringContainsString('item.find(".deleteFile").nyroModal()', $files);
     }
 }

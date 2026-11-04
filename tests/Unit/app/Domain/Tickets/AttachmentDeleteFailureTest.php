@@ -22,7 +22,18 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class AttachmentDeleteFailureTest extends TestCase
 {
-    public function testFailedDeleteReportsErrorAndRendersTicketAgain(): void
+    public static function rejectedDeletes(): array
+    {
+        return [
+            'storage rejects matching file' => ['ticket', 42, Roles::$editor, true],
+            'another ticket' => ['ticket', 43, Roles::$editor, false],
+            'same number in another module' => ['project', 42, Roles::$editor, false],
+            'read-only actor' => ['ticket', 42, Roles::$readonly, false],
+        ];
+    }
+
+    /** @dataProvider rejectedDeletes */
+    public function testFailedDeleteReportsErrorAndRendersTicketAgain(string $module, int $moduleId, string $role, bool $attempt): void
     {
         $ticket = new Ticket;
         $ticket->id = 42;
@@ -30,7 +41,8 @@ final class AttachmentDeleteFailureTest extends TestCase
         $tickets = $this->createStub(Tickets::class);
         $tickets->method('getTicket')->willReturn($ticket);
         $files = $this->createMock(Files::class);
-        $files->expects(self::once())->method('deleteFile')->with(19)->willReturn(false);
+        $files->expects($role === Roles::$editor ? self::once() : self::never())->method('getFile')->with(19)->willReturn(['module' => $module, 'moduleId' => $moduleId]);
+        $files->expects($attempt ? self::once() : self::never())->method('deleteFile')->with(19)->willReturn(false);
         $files->method('getFilesByModule')->willReturn([]);
         $comments = $this->createStub(Comments::class);
         $comments->method('getComments')->willReturn([]);
@@ -55,7 +67,7 @@ final class AttachmentDeleteFailureTest extends TestCase
         $session->method('get')->willReturnCallback(static fn ($key) => [
             'currentProject' => 7,
             'userdata.id' => 1,
-            'userdata.role' => Roles::$editor,
+            'userdata.role' => $role,
             'usersettings.timezone' => 'UTC',
         ][$key] ?? null);
         $previous = Container::getInstance();

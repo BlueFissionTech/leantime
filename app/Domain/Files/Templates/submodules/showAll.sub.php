@@ -10,6 +10,8 @@ $module = Frontcontroller::getModuleName('');
 $action = Frontcontroller::getActionName('');
 $maxSize = \Leantime\Core\Files\FileManager::getMaximumFileUploadSize();
 $moduleId = $_GET['id'] ?? '';
+$attachmentTicketId = (int) ($tpl->get('attachmentTicketId') ?? 0);
+$deleteUrl = BASE_URL.($attachmentTicketId > 0 ? '/tickets/showTicket/'.$attachmentTicketId : '/files/showAll').'?delFile=';
 ?>
 <div id="fileManager">
 
@@ -54,7 +56,7 @@ $moduleId = $_GET['id'] ?? '';
                                 <?php
 
                                 if ($login::userIsAtLeast($roles::$editor)) { ?>
-                                    <li><a href="<?= BASE_URL ?>/files/showAll?delFile=<?php echo $file['id'] ?>" class="delete deleteFile"><i class="fa fa-trash"></i> <?php echo $tpl->__('links.delete'); ?></a></li>
+                                    <li><a href="<?= htmlentities($deleteUrl).(int) $file['id'] ?>" class="delete deleteFile"><i class="fa fa-trash"></i> <?php echo $tpl->__('links.delete'); ?></a></li>
                                 <?php } ?>
 
                             </ul>
@@ -144,7 +146,7 @@ $moduleId = $_GET['id'] ?? '';
                 return false;
             });
 
-            jQuery(".deleteFile").nyroModal();
+            jQuery("#medialist .deleteFile").nyroModal();
 
 
         });
@@ -243,7 +245,7 @@ $moduleId = $_GET['id'] ?? '';
                                     '<li><a target="_blank" href="<?= BASE_URL ?>/files/get?module='+ response.module +'&encName='+ response.encName +'&ext='+ response.extension +'&realName='+ response.realName +'"><?php echo str_replace("'", '"', $tpl->__('links.download')); ?></a></li>'+
                                     <?php
                                     if ($login::userIsAtLeast($roles::$editor)) { ?>
-                                        '<li><a href="<?= BASE_URL ?>/files/showAll?delFile='+ response.fileId +'" class="delete deleteFile"><i class="fa fa-trash"></i> <?php echo str_replace("'", '"', $tpl->__('links.delete')); ?></a></li>'+
+                                        '<li><a href="'+ <?= json_encode($deleteUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> + encodeURIComponent(response.fileId) +'" class="delete deleteFile"><i class="fa fa-trash"></i> <?php echo str_replace("'", '"', $tpl->__('links.delete')); ?></a></li>'+
                                     <?php } ?>
                                 '</ul>'+
                             '</div>'+
@@ -254,7 +256,8 @@ $moduleId = $_GET['id'] ?? '';
                             '</a>'+
                         '</li>';
 
-                 jQuery("#medialist").append(html);
+                 const item = jQuery(html).appendTo("#medialist");
+                 item.find(".deleteFile").nyroModal();
         }
 
     });
