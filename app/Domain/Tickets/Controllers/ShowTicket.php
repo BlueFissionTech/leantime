@@ -90,13 +90,18 @@ class ShowTicket extends Controller
 
         // Delete file
         if (isset($params['delFile']) === true) {
-            if ($result = $this->fileService->deleteFile($params['delFile'])) {
+            $fileId = filter_var($params['delFile'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $file = $fileId && AuthService::userIsAtLeast(Roles::$editor) ? $this->fileService->getFile($fileId) : false;
+            if ($file && $file['module'] === 'ticket' && (int) $file['moduleId'] === $id && $this->fileService->deleteFile($fileId)) {
                 $this->tpl->setNotification($this->language->__('notifications.file_deleted'), 'success');
 
-                return Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.'#files');
+                $response = Frontcontroller::redirect(BASE_URL.'/tickets/showTicket/'.$id.'#files');
+                $response->headers->set('HX-Trigger', 'ticketUpdate');
+
+                return $response;
             }
 
-            $this->tpl->setNotification($result['msg'], 'error');
+            $this->tpl->setNotification($this->language->__('notifications.file_deleted_error'), 'error');
         }
 
         // Delete comment
@@ -275,6 +280,7 @@ class ShowTicket extends Controller
         $this->tpl->assign('comments', $comments);
 
         $files = $this->fileService->getFilesByModule('ticket', $id);
+        $this->tpl->assign('attachmentTicketId', $id);
         $this->tpl->assign('numFiles', count($files));
         $this->tpl->assign('files', $files);
 
