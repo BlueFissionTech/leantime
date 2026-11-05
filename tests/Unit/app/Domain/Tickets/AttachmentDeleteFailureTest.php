@@ -16,6 +16,7 @@ use Leantime\Domain\Tickets\Controllers\ShowTicket;
 use Leantime\Domain\Tickets\Models\Tickets as Ticket;
 use Leantime\Domain\Tickets\Services\Tickets;
 use Leantime\Domain\Timesheets\Services\Timesheets;
+use Leantime\Domain\Ticketdependencies\Services\Ticketdependencies;
 use Leantime\Domain\Users\Services\Users;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,6 +51,10 @@ final class AttachmentDeleteFailureTest extends TestCase
         $language = $this->createMock(Language::class);
         $language->expects(self::once())->method('__')->with('notifications.file_deleted_error')->willReturn('File could not be deleted');
         $view = $this->createMock(Template::class);
+        $assignments = [];
+        $view->method('assign')->willReturnCallback(static function ($name, $value) use (&$assignments): void {
+            $assignments[$name] = $value;
+        });
         $view->expects(self::once())->method('setNotification')->with('File could not be deleted', 'error');
         $response = new Response;
         $view->expects(self::once())->method('displayPartial')->with('tickets.showTicketModal')->willReturn($response);
@@ -83,9 +88,12 @@ final class AttachmentDeleteFailureTest extends TestCase
                 $comments,
                 $this->createStub(Timesheets::class),
                 $this->createStub(Users::class),
+                $this->createStub(Ticketdependencies::class),
                 $this->createStub(GithubElevation::class),
             );
             self::assertSame($response, $controller->get(['id' => 42, 'delFile' => 19]));
+            self::assertSame(42, $assignments['attachmentTicketId']);
+            self::assertArrayHasKey('dependencyTicketIds', $assignments);
         } finally {
             Container::setInstance($previous);
         }

@@ -7,6 +7,7 @@ use Leantime\Core\Controller\HtmxController;
 use Leantime\Domain\Auth\Models\Roles;
 use Leantime\Domain\Auth\Services\Auth as AuthService;
 use Leantime\Domain\Setting\Services\Setting;
+use Leantime\Domain\Tickets\Htmx\HtmxTicketEvents;
 use Leantime\Domain\Tickets\Services\Tickets as TicketService;
 
 /**
@@ -468,6 +469,7 @@ class MyToDos extends HtmxController
 
             if ($result) {
                 $this->tpl->setNotification($this->language->__('notifications.title_updated'), 'success');
+                $this->tpl->setHTMXEvent(HtmxTicketEvents::UPDATE->value);
             } else {
                 $this->tpl->setNotification($this->language->__('notifications.title_update_error'), 'error');
             }

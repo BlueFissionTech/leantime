@@ -661,6 +661,16 @@ leantime.ticketsController = (function () {
         jQuery('[data-toggle="tooltip"]').tooltip();
     };
 
+    var triggerSubtaskRefreshIfNeeded = function (element) {
+        if (!window.htmx) {
+            return;
+        }
+
+        if (jQuery(element).closest("#ticketSubtasks").length > 0) {
+            htmx.trigger(document.body, "subtasksUpdated");
+        }
+    };
+
     var initEffortDropdown = function () {
 
         var storyPointLabels = {
@@ -674,6 +684,7 @@ leantime.ticketsController = (function () {
         };
 
         jQuery(".effortDropdown .dropdown-menu a").unbind().on("click", function () {
+            var sourceElement = this;
 
             var dataValue = jQuery(this).attr("data-value").split("_");
 
@@ -695,6 +706,7 @@ leantime.ticketsController = (function () {
                     function () {
                         jQuery("#effortDropdownMenuLink" + ticketId + " span.text").text(storyPointLabels[effortId]);
                         jQuery.growl({message: leantime.i18n.__("short_notifications.effort_updated"), style: "success"});
+                        triggerSubtaskRefreshIfNeeded(sourceElement);
 
                         // Move card to correct swimlane if grouped by effort
                         if (leantime.kanbanGroupBy === 'storypoints') {
@@ -807,6 +819,7 @@ leantime.ticketsController = (function () {
     var initStatusDropdown = function () {
 
         jQuery(".statusDropdown .dropdown-menu a").unbind().on("click", function () {
+                var sourceElement = this;
 
                 var dataValue = jQuery(this).attr("data-value").split("_");
                 var dataLabel = jQuery(this).attr('data-label');
@@ -831,6 +844,7 @@ leantime.ticketsController = (function () {
                         jQuery("#statusDropdownMenuLink" + ticketId + " span.text").text(dataLabel);
                         jQuery("#statusDropdownMenuLink" + ticketId).removeClass().addClass(className + " dropdown-toggle f-left status ");
                         jQuery.growl({message: leantime.i18n.__("short_notifications.status_updated"), style: "success"});
+                        triggerSubtaskRefreshIfNeeded(sourceElement);
 
                         leantime.handleAsyncResponse(response);
 
@@ -882,6 +896,7 @@ leantime.ticketsController = (function () {
     var initAsyncInputChange = function () {
 
         jQuery(".asyncInputUpdate").on("change", function () {
+            var inputElement = this;
             var dataLabel = jQuery(this).attr('data-label').split("-");
 
             if (dataLabel.length == 2) {
@@ -903,6 +918,7 @@ leantime.ticketsController = (function () {
                 ).done(
                     function () {
                         jQuery.growl({message: leantime.i18n.__("notifications.subtask_saved"), style: "success"});
+                        triggerSubtaskRefreshIfNeeded(inputElement);
                     }
                 );
             }
@@ -1000,6 +1016,7 @@ leantime.ticketsController = (function () {
 
         leantime.dateController.initDatePicker(".quickDueDates, .duedates", function(date, instance) {
             //TODO: Update to use htmx, this is awful
+            var sourceElement = this;
             var day = instance.currentDay;
             var month = instance.currentMonth;
             var year = instance.currentYear;
@@ -1011,6 +1028,7 @@ leantime.ticketsController = (function () {
 
             leantime.ticketsRepository.updateDueDates(id, parsed, function () {
                 jQuery.growl({message: leantime.i18n.__("short_notifications.duedate_updated"), style: "success"});
+                triggerSubtaskRefreshIfNeeded(sourceElement);
             });
 
         });
@@ -1106,11 +1124,12 @@ leantime.ticketsController = (function () {
 
 
             let url = new URL(window.location.href);
-            let tab = url.searchParams.get("tab");
+            let tab = window.leantime.activeTicketTab || url.searchParams.get("tab");
 
             let activeTabIndex = 0;
             if (tab) {
                 activeTabIndex = jQuery('.ticketTabs').find('a[href="#' + tab + '"]').parent().index();
+                window.leantime.activeTicketTab = "";
             }
 
             jQuery('.ticketTabs').tabs({
@@ -1160,6 +1179,11 @@ leantime.ticketsController = (function () {
             var groupBy = jQuery("input[name='groupBy']:checked").val();
             var showTasks = jQuery("input[name='showTasks']:checked").val();
 
+            if (project === "all") {
+                milestones = "";
+                sprints = "";
+            }
+
             var query = "?search=true";
             if (project != "" && project != undefined) {
                 query = query + "&projectId=" + project}
@@ -1203,6 +1227,11 @@ leantime.ticketsController = (function () {
             var status = jQuery("#statusSelect").val();
             var sort = jQuery("#sortBySelect").val();
             var groupBy = jQuery("input[name='groupBy']:checked").val();
+
+            if (project === "all") {
+                milestones = "";
+                sprints = "";
+            }
 
             var query = "?search=true";
         if (project != "" && project != undefined) {
@@ -1598,7 +1627,7 @@ leantime.ticketsController = (function () {
             var columnIndex = false;
 
 
-            var defaultOrder = [];
+            var defaultOrder = [[9, 'asc']];
 
             var allTickets = jQuery(".ticketTable").DataTable({
                 "language": {

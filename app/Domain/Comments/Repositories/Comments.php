@@ -199,4 +199,57 @@ class Comments
 
         return array_map(fn ($item) => (array) $item, $results->toArray());
     }
+
+    public function getRecentProjectStatusUpdates(int $limit = 10): array|false
+    {
+        $userId = session('userdata.id') ?? -1;
+        $clientId = session('userdata.clientId') ?? -1;
+        $requesterRole = session()->exists('userdata') ? session('userdata.role') : -1;
+
+        $query = $this->db->table('zp_comment as comment')
+            ->select(
+                'comment.id',
+                'comment.text',
+                'comment.date',
+                'comment.moduleId',
+                'comment.userId',
+                'comment.status',
+                'project.id as projectId',
+                'project.name as projectName',
+                'user.firstname',
+                'user.lastname'
+            )
+            ->join('zp_projects as project', function ($join) {
+                $join->on('comment.moduleId', '=', 'project.id')
+                    ->where('comment.module', '=', 'project');
+            })
+            ->join('zp_user as user', 'comment.userId', '=', 'user.id')
+            ->where('comment.module', 'project')
+            ->where('comment.commentParent', 0)
+            ->whereNotNull('comment.status')
+            ->where('comment.status', '<>', '')
+            ->where(function ($q) use ($userId, $clientId, $requesterRole) {
+                $q->whereIn('project.id', function ($subquery) use ($userId) {
+                    $subquery->select('projectId')
+                        ->from('zp_relationuserproject')
+                        ->where('userId', $userId);
+                })
+                    ->orWhere('project.psettings', 'all')
+                    ->orWhere(function ($q2) use ($clientId) {
+                        $q2->where('project.psettings', 'clients')
+                            ->where('project.clientId', $clientId);
+                    })
+                    ->orWhere(function ($q3) use ($requesterRole) {
+                        if (in_array($requesterRole, ['admin', 'manager'])) {
+                            $q3->whereRaw('1=1');
+                        }
+                    });
+            })
+            ->orderBy('comment.date', 'desc')
+            ->limit($limit);
+
+        $results = $query->get();
+
+        return array_map(fn ($item) => (array) $item, $results->toArray());
+    }
 }

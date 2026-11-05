@@ -237,6 +237,7 @@
                             <i class="fa-solid fa-circle-plus"></i></a>
                     </x-slot>
                     <x-slot name="content">
+                        <!-- Quick Add Form for this group -->
                         <div class="quickAddForm" id="quickAddForm-{{ $groupKey }}"
                              style="display:none; margin-bottom:15px; padding-bottom:5px; padding-left:5px;">
                             <form method="post"
@@ -304,6 +305,7 @@
         </div>
 
         @if(isset($hasMoreTickets) && $hasMoreTickets === true)
+            <!-- Global Load more trigger for infinite scroll -->
             <div id="global-load-more"
                  class="load-more-trigger"
                  hx-get="{{ BASE_URL }}/widgets/myToDos/loadMore"
@@ -328,7 +330,12 @@
 
 
     <script type="text/javascript">
+
+        @dispatchEvent('scripts.afterOpen')
+
+
         jQuery(document).ready(function () {
+
             console.debugging = true;
             console.debug = function () {
                 if (!console.debugging) return;
@@ -344,7 +351,10 @@
 
 
                 if(sortableEnabled) {
+
+                    // Initialize the sortable lists for hierarchical tasks
                     jQuery('.sortable-list').nestedSortable();
+
                 }
 
             @else
@@ -357,9 +367,13 @@
         htmx.onLoad(function () {
             jQuery('.sortable-list').nestedSortable();
         });
+
+
     </script>
 
     <script>
+
+        // Quick Add Task functionality
         jQuery(document).ready(function () {
             initAddTaskBtns();
         });
@@ -369,6 +383,7 @@
         });
 
         function initAddTaskBtns() {
+            // Show the quick add form when the + button is clicked
             jQuery(document)
                 .off('click.todoQuickAdd', '#yourToDoContainer .add-task-button')
                 .on('click.todoQuickAdd', '#yourToDoContainer .add-task-button', function () {
@@ -377,6 +392,7 @@
                 jQuery('#quickAddForm-' + groupKey + ' .main-title-input').focus();
             });
 
+            // Hide the quick add form when cancel is clicked
             jQuery(document)
                 .off('click.todoQuickAdd', '#yourToDoContainer .cancel-add-task')
                 .on('click.todoQuickAdd', '#yourToDoContainer .cancel-add-task', function () {
@@ -416,6 +432,7 @@
                 });
 
         }
+
     </script>
 
 </div>

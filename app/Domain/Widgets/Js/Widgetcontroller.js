@@ -135,11 +135,14 @@ leantime.widgetController = (function () {
                 gridX: node.x != undefined ? node.x : 0,
                 gridY: node.y != undefined ? node.y : 0,
                 gridWidth: node.w != undefined ? node.w : 1,
-                gridHeight: node.h != undefined ? node.h : 1
+                gridHeight: node.h != undefined ? node.h : 1,
+                x: node.x != undefined ? node.x : 0,
+                y: node.y != undefined ? node.y : 0,
+                w: node.w != undefined ? node.w : 1,
+                h: node.h != undefined ? node.h : 1,
+                content: ''
             });
         });
-
-
         jQuery.post(leantime.appUrl+"/widgets/widgetManager",
             {
                 action: "saveGrid",
@@ -207,7 +210,12 @@ leantime.widgetController = (function () {
 
             // Add to grid and make it a widget
             grid.el.appendChild(widgetNode);
-            grid.makeWidget(widgetNode);
+            grid.makeWidget(widgetNode, {
+                x: position.x,
+                y: position.y,
+                w: widget.gridWidth || 2,
+                h: widget.gridHeight || 2
+            });
 
             // Initialize HTMX
             htmx.process(widgetNode);

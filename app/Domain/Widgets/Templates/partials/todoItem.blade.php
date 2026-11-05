@@ -219,6 +219,7 @@
 
     </div>
 
+    <!-- Subtask Form -->
     <div id="subtask-form-{{$ticket['id']}}" class="subtask-form ticketBox"
          style="display:none; margin:10px; margin-left:40px;">
         <form class="form-group"
@@ -245,6 +246,7 @@
             </div>
         </form>
     </div>
+    <!-- End Subtask Form -->
 
     <div id="accordion_content-{{ $accordionId }}"
          style="{{ $accordionState =='closed' ? 'display:none;' : '' }}"
@@ -256,6 +258,8 @@
         @endforeach
 
         @if($level == 0 && $ticket['type'] === "milestone")
+
+            <!-- Subtask Form -->
             <div id="task-add-form-{{ $groupKey }}-{{$ticket['id']}}" class="subtask-form ticketBox"
                  style="display:none; margin:5px 0px;">
                 <form class="form-group"
@@ -300,6 +304,7 @@
                     </div>
                 </form>
             </div>
+            <!-- End Subtask Form -->
 
             <a href="javascript:void(0);" id="task-add-form-{{ $groupKey }}-{{$ticket['id']}}-handler"
                onclick="jQuery(this).toggle(); jQuery('#task-add-form-{{ $groupKey }}-{{$ticket['id']}}').toggle(); "><i
